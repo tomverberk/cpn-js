@@ -139,6 +139,23 @@ export class ProjectConsoleComponent implements OnInit {
       }
     });
 
+    // Create Log
+
+    this.eventService.on(Message.SERVER_INIT_CREATE_LOG_START, () => {
+      this.logHtml = [];
+      this.nodes = [];
+      this.log("Create Log starting...");
+      this.timeSimStart = new Date().getTime();
+    });
+
+    this.eventService.on(Message.SERVER_INIT_CREATE_LOG_DONE, () => {
+      const elapsed = new Date().getTime() - this.timeSimStart;
+      this.logSuccess(
+        "Log created in " + this.timeConversion(elapsed) + "."
+      );
+    });
+
+
     // TOKENS
     this.eventService.on(Message.SIMULATION_STEP_DONE, () => {
       this.logSuccess(

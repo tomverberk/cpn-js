@@ -374,4 +374,16 @@ export class MainToolbarComponent implements OnInit {
       1 -
       this.validationService.history.currentModelIndex;
   }
+
+  onCreateLog() {
+    //TODO check what this does
+    this.isStart = true;
+
+    //TODO check what this function does.
+    this.accessCpnService
+      .initNet(this.modelService.getProjectData(), true)
+      .then(() => {
+        this.accessCpnService.createLog();
+      });
+  }
 }

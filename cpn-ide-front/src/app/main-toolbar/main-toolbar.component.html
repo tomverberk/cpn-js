@@ -112,7 +112,8 @@
           <span>Validate</span>
         </div>
       </li>
-
+      
+      <!-- Auto -->
       <li class="nav-item">
         <a (click)="onValidateAuto()" class="nav-link" [ngClass]="validationService.isAutoValidation ? 'red' : 'grey'"
           href="#">
@@ -150,8 +151,26 @@
       </ng-container>
     </li>
 
+    <div class="divider"></div>
+
+    <!-- Create log -->
+
+    <li class="nav-item">
+      <ng-container *ngIf="!accessCpnService.isSimulation">
+        <div (click)="onCreateLog()" class="nav-link mb-0 green"
+          [ngClass]="{'disabled': accessCpnService.initNetProcessing || accessCpnService.initSimProcessing}">
+          <i class="fas fa-play"></i>
+          <span>Create Log</span>
+        </div>
+      </ng-container>
+    </li>
+
 
   </ul>
+
+
+
+
 
   <ul class="navbar-nav ml-auto">
 

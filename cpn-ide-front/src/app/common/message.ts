@@ -39,6 +39,10 @@ export class Message {
   static SERVER_INIT_SIM_START = "server.init.sim.start";
   static SERVER_INIT_SIM_DONE = "server.init.sim.done";
 
+  static SERVER_INIT_CREATE_LOG = "server.init.create.log"
+  static SERVER_INIT_CREATE_LOG_START = "server.init.create.log.start";
+  static SERVER_INIT_CREATE_LOG_DONE = "server.init.create.log.done"
+
   static SERVER_GET_BINDINGS = "server.get.bindings";
   static SERVER_GET_SIM_STATE = "server.get.sim.state";
 

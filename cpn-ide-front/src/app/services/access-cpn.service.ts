@@ -1126,4 +1126,11 @@ export class AccessCpnService {
         );
     });
   }
+
+  createLog() {
+    this.eventService.send(Message.SERVER_INIT_CREATE_LOG_START, {});
+
+
+    this.eventService.send(Message.SERVER_INIT_CREATE_LOG_DONE, {});
+  }
 }
