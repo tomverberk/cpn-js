@@ -87,7 +87,6 @@ public class SimulatorController {
     public ResponseEntity doStep(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("transId") String transId) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             String firedId =_netContainer.makeStep(sessionId, transId);
-
             NetInfo netInf = new NetInfo(Arrays.asList(firedId), _netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             return ResponseEntity.status(HttpStatus.OK).body(netInf);
         });
