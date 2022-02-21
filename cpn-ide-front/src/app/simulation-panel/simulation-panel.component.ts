@@ -71,6 +71,15 @@ export class SimulationPanelComponent implements OnInit, OnDestroy {
     this.simulationService.runReplication();
   }
 
+  onRunCreateLog(){
+    console.log(
+      this.constructor.name,
+      "onRunCreateLog(), simulationConfig = ",
+      this.simulationService.simulationConfig
+    );
+    this.simulationService.runCreateLog();
+  }
+
   getMultistepProgress() {
     return (
       (100 *

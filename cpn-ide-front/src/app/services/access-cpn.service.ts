@@ -19,6 +19,7 @@ export class AccessCpnService {
   public errorPagesIds = [];
   public warnings = [];
   public replicationProcessingProgress = "0";
+  public createLogProcessingProgress = "0";
 
   public stateData = undefined;
   public readyData = [];
@@ -32,11 +33,15 @@ export class AccessCpnService {
   public fs = undefined;
 
   public simulationReport = "";
+  public log = "";
   public simulationHtmlFiles = [];
+  public logHtmlFiles = [];
   public initNetProcessing;
   public initSimProcessing;
   public fastforwardProcessing = false;
   public replicationProcessing = false;
+  public createLogProcessing = false;
+  public logProcessing = false;
   public complexVerify = false;
   public isRunningScriptOnServer = false;
 
@@ -784,7 +789,7 @@ export class AccessCpnService {
       const postData = options;
 
       console.log("AccessCpnService, doReplication(), postData = ", postData);
-      this.gettingProgress(postData);
+      this.gettingProgressReplication(postData);
       const url =
         this.settingsService.getServerUrl() + "/api/v2/cpn/sim/replication";
       this.http
@@ -857,7 +862,95 @@ export class AccessCpnService {
     });
   }
 
-  gettingProgress(options) {
+  doCreateLog(options) {
+    this.log = "HALLO";
+    console.log("start doCreateLog")
+    return new Promise<void>((resolve,reject)=> {
+      if(!this.simInitialized || !this.sessionId){
+        resolve();
+        return;
+      }
+
+      this.logProcessing = true;
+
+      const postData = options
+
+      console.log("AccessCPNService, doCreateLog(), postData =", postData);
+      this.gettingProgressCreateLog(postData);
+      const url =
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/create_log";
+      this.http
+        .post(url, postData, {headers: {"X-SessionId": this.sessionId} })
+        .subscribe(
+          (data:any)=> {
+            console.log("DATA STARTS HERE ++++++++++++++++++++++++++")
+            console.log(
+              "AccessCPService, doCreateLog, SUCCESS, data = ",
+              data
+            );
+            console.log("DATE ENDS HEEERRRE ____________________________")
+            if(data) {
+              this.log = data.extraInfo;
+              this.logHtmlFiles = data.files
+              const regexFindPaths = new RegExp("\\b:\\s.*.html", "g");
+              const allPaths = this.log.match(regexFindPaths);
+              console.log(allPaths);
+              console.log(this.log);
+
+              let count = 0;
+              for (const path of allPaths) {
+                this.log = this.log.replace(
+                  path.substr(2),
+                  'a id="hrefOntResult' +
+                  count +
+                  '"href = "#">' +
+                  path.substr(2) +
+                  "</a>"
+                );
+                count++;
+              }
+              this.eventService.send(Message.SIMULATION_STEP_DONE)
+              
+              this.getSimState();
+
+              this.createLogProcessing = false;
+              resolve();
+              setTimeout(() => {
+                for(let i = 0; i < allPaths.length; i++){
+                  const lnk = document.getElementById("hrefOntResult"+ i);
+                  if( this.electronService.isElectronApp) {
+                    lnk.onclick = this.openAsPageInNewTabElectron;
+                  } else {
+                    lnk.onclick = this.openAsPageInNewTab;
+                  }
+                  const file = this.logHtmlFiles.filter(
+                    (value) => value.fileName === allPaths[i].substr(2)
+                  )[0];
+                  lnk["logHtmlFile"] = file ? file.htmlContent : "";
+                  console.log("doCreateLogTest", lnk);
+                }
+              }, 1000);
+            }
+          }, 
+          (error) => {
+            console.error(
+              "AccessCPNService, DoCreateLog(), ERROR, data = ",
+              + error + 
+              "URL = " +
+              url
+            );
+
+            this.createLogProcessing = false;
+
+            this.eventService.send(Message.SERVER_ERROR, { data: error});
+            reject(error);
+          }
+        );
+    });
+  }
+
+  //TODO MERGE THESE FUNCTIONS
+  gettingProgressReplication(options) {
     const self = this;
     const postData = options;
     const url =
@@ -873,7 +966,28 @@ export class AccessCpnService {
       });
     if (this.replicationProcessing) {
       setTimeout(function () {
-        self.gettingProgress(options);
+        self.gettingProgressReplication(options);
+      }, 2000);
+    }
+  }
+
+  gettingProgressCreateLog(options) {
+    const self = this;
+    const postData = options;
+    const url =
+      this.settingsService.getServerUrl() +
+      "/api/v2/cpn/sim/create_log_progress";
+    this.http
+      .post(url, postData, { headers: { "X-SessionId": this.sessionId } })
+      .subscribe((data: any) => {
+        self.createLogProcessingProgress = parseFloat(data.progress).toFixed(
+          2
+        );
+        console.log("processing", data);
+      });
+    if (this.createLogProcessing) {
+      setTimeout(function () {
+        self.gettingProgressCreateLog(options);
       }, 2000);
     }
   }

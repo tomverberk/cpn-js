@@ -1,5 +1,6 @@
 package com.indevstudio.cpnide.server.controllers;
 
+import com.indevstudio.cpnide.server.createLog.CreateLog;
 import com.indevstudio.cpnide.server.model.*;
 import com.indevstudio.cpnide.server.net.PetriNetContainer;
 import io.swagger.annotations.ApiOperation;
@@ -21,7 +22,7 @@ public class SimulatorController {
 
 
     @Autowired
-    PetriNetContainer _netConatiner;
+    PetriNetContainer _netContainer;
 
     @PostMapping(value = "/sim/init")
     @ApiOperation(nickname = "Initialize simulation", value = "Init (or ReInit) simulator")
@@ -33,8 +34,8 @@ public class SimulatorController {
             })
     public ResponseEntity simInit(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody Options options) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            _netConatiner.InitSimulator(sessionId, options);
-            NetInfo netInf = new NetInfo(Arrays.asList(),_netConatiner.getEnableTransitions(sessionId), _netConatiner.getTokensAndMarking(sessionId));
+            _netContainer.InitSimulator(sessionId, options);
+            NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             return ResponseEntity.status(HttpStatus.OK).body(netInf);
         });
     }
@@ -48,7 +49,7 @@ public class SimulatorController {
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
     public ResponseEntity getMarks(@RequestHeader(value = "X-SessionId") String sessionId) {
-        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netConatiner.returnTokensAndMarking(sessionId)));
+        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.returnTokensAndMarking(sessionId)));
     }
 
     @GetMapping(value = "/sim/transitions/enabled")
@@ -60,7 +61,7 @@ public class SimulatorController {
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
     public ResponseEntity getEnabledTransitions(@RequestHeader(value = "X-SessionId") String sessionId) {
-        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netConatiner.returnEnableTrans(sessionId)));
+        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.returnEnableTrans(sessionId)));
     }
 
     @GetMapping(value = "/sim/state")
@@ -72,7 +73,7 @@ public class SimulatorController {
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
     public ResponseEntity getState(@RequestHeader(value = "X-SessionId") String sessionId) {
-        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netConatiner.getState(sessionId)));
+        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.getState(sessionId)));
     }
 
     @GetMapping(value = "/sim/step/{transId}")
@@ -85,9 +86,9 @@ public class SimulatorController {
             })
     public ResponseEntity doStep(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("transId") String transId) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            String firedId =_netConatiner.makeStep(sessionId, transId);
+            String firedId =_netContainer.makeStep(sessionId, transId);
 
-            NetInfo netInf = new NetInfo(Arrays.asList(firedId), _netConatiner.getEnableTransitions(sessionId), _netConatiner.getTokensAndMarking(sessionId));
+            NetInfo netInf = new NetInfo(Arrays.asList(firedId), _netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             return ResponseEntity.status(HttpStatus.OK).body(netInf);
         });
     }
@@ -101,7 +102,7 @@ public class SimulatorController {
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
     public ResponseEntity getBindings(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("transId") String transId) {
-        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netConatiner.getBindings(sessionId, transId)));
+        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.getBindings(sessionId, transId)));
     }
 
     @PostMapping(value = "/sim/step_fast_forward")
@@ -114,8 +115,8 @@ public class SimulatorController {
             })
     public ResponseEntity doStepFastForward(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody MultiStep stepParams) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            String content = _netConatiner.makeStepFastForward(sessionId,stepParams);
-            final NetInfo netInf = new NetInfo(Arrays.asList(), _netConatiner.getEnableTransitions(sessionId), _netConatiner.getTokensAndMarking(sessionId));
+            String content = _netContainer.makeStepFastForward(sessionId,stepParams);
+            final NetInfo netInf = new NetInfo(Arrays.asList(), _netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             netInf.setExtraInfo(content);
             return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(netInf));
         });
@@ -132,7 +133,7 @@ public class SimulatorController {
             })
     public ResponseEntity doReplication(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody Replication replicationParams) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            ReplicationResp resp = _netConatiner.makeReplication(sessionId,replicationParams);
+            ReplicationResp resp = _netContainer.makeReplication(sessionId,replicationParams);
             return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
         });
     }
@@ -147,10 +148,40 @@ public class SimulatorController {
             })
     public ResponseEntity replicationProgress(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody Replication replicationParams) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            ReplicationProgressResp resp = _netConatiner.getFilesForReplicationProgress(sessionId,replicationParams);
+            ReplicationProgressResp resp = _netContainer.getFilesForReplicationProgress(sessionId,replicationParams);
             return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
         });
     }
+
+    @PostMapping(value = "/sim/create_log")
+    @ApiOperation(nickname = "Create log", value = "Create log - long running op (from mins to hours)")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "Step success", response = CreateLog.class),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public void doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody CreateLog createLogParams) {
+        CreateLog createLog = new CreateLog();
+        createLog.AddToLog();
+    }
+
+    @PostMapping(value = "/sim/create_log_progress")
+    @ApiOperation(nickname = "Create log progress", value = "Create log - long running op (from mins to hours)")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "Step success", response = Replication.class),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity CreateLogProgress(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody CreateLogFromReplications createLogParams) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            CreateLogProgressResp resp = _netContainer.getFilesForCreateLogProgress(sessionId,createLogParams);
+            return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
+        });
+    }
+
+
 
 
 
@@ -165,7 +196,7 @@ public class SimulatorController {
     public ResponseEntity doScript(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody Replication script) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             ReplicationResp resp = new ReplicationResp();
-            resp.setExtraInfo(_netConatiner.runScript(sessionId,script));
+            resp.setExtraInfo(_netContainer.runScript(sessionId,script));
             return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
         });
     }
@@ -180,8 +211,8 @@ public class SimulatorController {
             })
     public ResponseEntity doStepWithBinding(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("transId") String transId, @RequestBody BindingMark mark) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            _netConatiner.makeStepWithBinding(sessionId, mark.getBind_id(), transId);
-            NetInfo netInf = new NetInfo(Arrays.asList(),_netConatiner.getEnableTransitions(sessionId), _netConatiner.getTokensAndMarking(sessionId));
+            _netContainer.makeStepWithBinding(sessionId, mark.getBind_id(), transId);
+            NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(netInf));
         });
     }
@@ -196,7 +227,7 @@ public class SimulatorController {
             })
     public ResponseEntity doStepWithBinding(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody MonitorDescr monitorDescr) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netConatiner.getNewMonitor(sessionId, monitorDescr)));
+            return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.getNewMonitor(sessionId, monitorDescr)));
         });
     }
 

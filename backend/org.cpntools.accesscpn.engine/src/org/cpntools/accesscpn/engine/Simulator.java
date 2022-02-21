@@ -414,6 +414,7 @@ public final class Simulator extends Observable {
 	 *             if ML raises an exception
 	 */
 	public String evaluate(final Object source, final String expr) throws Exception {
+		System.out.println("Begin evaluate");
 		lock();
 		if (!packetQueue.isEmpty()) { throw new IOException("PacketQueue contains stale data"); }
 		if (!evalQueue.isEmpty()) { throw new IOException("EvalQueue contains stale data"); }

@@ -34,7 +34,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @Component
@@ -245,6 +244,33 @@ public class PetriNetContainer {
         return outputPathContent;
     }
 
+    CreateLogResp getOutputPathLogs(String sessionId) throws Exception {
+        String pathStr = getOutputFullPathStr(sessionId);
+
+        final StringBuilder sb = new StringBuilder();
+        final List<HtmlFileContent> htmlContent  = new ArrayList<>();
+        List<Path> files = Files
+                .walk(Paths.get(pathStr).toAbsolutePath())
+                .filter(Files::isRegularFile)
+                .filter(p -> p.toString().endsWith(".html"))
+                .collect(Collectors.toList());
+
+        for (Path f : files) {
+            sb.append("\n\nFilename: " + f.toString() + "\n");
+            final StringBuilder fileHtmlContent = new StringBuilder();
+
+            Files.lines(f).forEach(s -> {
+                sb.append(s + "\n");
+                fileHtmlContent.append(s + "\n");
+            });
+            htmlContent.add(new HtmlFileContent(f.toString(), fileHtmlContent.toString()));
+        }
+        CreateLogResp outputPathContent = new CreateLogResp();
+        outputPathContent.setExtraInfo(sb.toString());
+        outputPathContent.setFiles(htmlContent);
+        return outputPathContent;
+    }
+
 
     public ReplicationProgressResp getFilesForReplicationProgress(String sessionId, Replication replicationParams) throws Exception{
         String pathStr = getOutputFullPathStr(sessionId);
@@ -258,6 +284,21 @@ public class PetriNetContainer {
         } else {
             replicationProgressResp.setProgress("0");
             return replicationProgressResp;
+        }
+    }
+
+    public CreateLogProgressResp getFilesForCreateLogProgress(String sessionId, CreateLogFromReplications createLogParams) throws Exception{
+        String pathStr = getOutputFullPathStr(sessionId);
+        CreateLogProgressResp createLogProgressResp = new CreateLogProgressResp();
+        String[] files = Arrays.stream(new File(pathStr).list()).filter(s -> s.startsWith("reps_")).toArray(String[]::new);
+        if(files.length > 0) {
+            String curCreateLogFolderPath = files[files.length-1];
+            String[] simfiles = Arrays.stream((new File(pathStr+ "/" + curCreateLogFolderPath)).list()).filter(s -> s.startsWith("sim_")).toArray(String[]::new);;
+            createLogProgressResp.setProgress("" + (100.0 * simfiles.length / Integer.valueOf(createLogParams.getRepeat())));
+            return createLogProgressResp;
+        } else {
+            createLogProgressResp.setProgress("0");
+            return createLogProgressResp;
         }
     }
 
@@ -625,6 +666,16 @@ public class PetriNetContainer {
         sim.evaluate("CPN'Replications.nreplications " + stepParam.getRepeat());
         log.debug("Written report to " + sim.getOutputDir());
         return getOutputPathContent(sessionId);
+    }
+
+    public CreateLogResp makeCreateLog(String sessionId, CreateLogFromReplications stepParam) throws Exception {
+        HighLevelSimulator sim = usersSimulator.get(sessionId);
+        log.debug("Writing log to " + sim.getOutputDir());
+        File fileObj = new File(sim.getOutputDir());
+        fileObj.mkdirs();
+        sim.evaluate(stepParam.getRepeat());
+        log.debug("Written log to " + sim.getOutputDir());
+        return getOutputPathLogs(sessionId);
     }
 
     public String runScript(String sessionId, Replication stepParam) throws Exception {

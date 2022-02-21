@@ -14,6 +14,7 @@ export class SimulationService {
   MULTI_STEP = 3;
   MULTI_STEP_FF = 4;
   REPLICATION = 5;
+  CREATE_LOG = 6;
 
   mode = this.SINGLE_STEP;
 
@@ -40,6 +41,10 @@ export class SimulationService {
     replication: {
       repeat: 30,
     },
+
+    createLog:{
+      repeat: 30,
+    }
   };
 
   public isAnimation = true;
@@ -401,6 +406,25 @@ export class SimulationService {
         modelEditor.updateElementStatus(false);
       }
     });
+  }
+
+  runCreateLog(){
+    console.log(
+      this.constructor.name,
+      "runCreateLog(), this.simulationConfig.CreateLog = ",
+      this.simulationConfig.createLog
+    );
+    const config = this.simulationConfig.createLog; // 30
+    const options = {
+      repeat: "" + config.repeat,
+    };
+    this.accessCpnService.doCreateLog(options).then(()=> {
+      const modelEditorList =
+        this.editorPanelService.getModelEditorList() || [];
+      for (const modelEditor of modelEditorList) {
+        modelEditor.updateElementStatus(false);
+      }
+    })
   }
 
   runscript(script) {

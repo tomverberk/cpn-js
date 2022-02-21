@@ -188,4 +188,30 @@
     </table>
   </div>
 
+  <div class="blockHeader" (click)="simulationService.setMode(simulationService.CREATE_LOG)"
+    [ngClass]="simulationService.mode === simulationService.CREATE_LOG ? 'enabled' : 'disabled'">
+    <i class="fas fa-copy"></i>
+    <span>Create Log</span>
+  </div>
+  <div class="note" [ngClass]="{'expanded': simulationService.mode === simulationService.CREATE_LOG }">
+    <table>
+      <tr>
+        <td>Repeat</td>
+        <td>
+          <input type="number" value="30" class="full-width"
+            [(ngModel)]="simulationService.simulationConfig.createLog.repeat">
+        </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td class="full-width text-right">
+          <button type="button" class="btn btn-primary" (click)="onRunCreateLog()">
+            <i class="fas fa-play"></i>
+            <span>Run</span>
+          </button>
+        </td>
+      </tr>
+    </table>
+  </div>
+
 </div>
