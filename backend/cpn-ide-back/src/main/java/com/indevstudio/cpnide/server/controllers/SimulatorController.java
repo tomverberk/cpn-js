@@ -161,8 +161,7 @@ public class SimulatorController {
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
     public void doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody CreateLog createLogParams) {
-        CreateLog createLog = new CreateLog();
-        createLog.AddToLog();
+        _netContainer.makeCreateLog(sessionId);
     }
 
     @PostMapping(value = "/sim/create_log_progress")

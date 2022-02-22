@@ -1,5 +1,6 @@
 package com.indevstudio.cpnide.server.net;
 
+import com.indevstudio.cpnide.server.createLog.CreateLog;
 import com.indevstudio.cpnide.server.model.*;
 import com.indevstudio.cpnide.server.model.monitors.MonitorTemplate;
 import com.indevstudio.cpnide.server.model.monitors.MonitorTemplateFactory;
@@ -44,6 +45,7 @@ public class PetriNetContainer {
     private ConcurrentHashMap<String, Checker> usersCheckers = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, HighLevelSimulator> usersSimulator = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, NetInfo> netInf = new ConcurrentHashMap<>();
+    private CreateLog createLog = new CreateLog();
     HighLevelSimulator _sim;
     private final static Object lock = new Object();
 
@@ -642,6 +644,7 @@ public class PetriNetContainer {
             HighLevelSimulator s = usersSimulator.get(sessionId);
             b = s.executeAndGet(getTargetTransition(s, transId));
         }
+        createLog.createActivityFromFiredBinding(b);
         return b.getTransitionInstance().getNode().getId();
     }
 
@@ -668,14 +671,11 @@ public class PetriNetContainer {
         return getOutputPathContent(sessionId);
     }
 
-    public CreateLogResp makeCreateLog(String sessionId, CreateLogFromReplications stepParam) throws Exception {
+    public void makeCreateLog(String sessionId) {
         HighLevelSimulator sim = usersSimulator.get(sessionId);
         log.debug("Writing log to " + sim.getOutputDir());
-        File fileObj = new File(sim.getOutputDir());
-        fileObj.mkdirs();
-        sim.evaluate(stepParam.getRepeat());
+        createLog.CreateLog();
         log.debug("Written log to " + sim.getOutputDir());
-        return getOutputPathLogs(sessionId);
     }
 
     public String runScript(String sessionId, Replication stepParam) throws Exception {
