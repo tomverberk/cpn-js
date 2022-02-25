@@ -1,6 +1,6 @@
 package com.indevstudio.cpnide.server.controllers;
 
-import com.indevstudio.cpnide.server.createLog.CreateLog;
+import com.indevstudio.cpnide.server.createLog.CreateLogContainer;
 import com.indevstudio.cpnide.server.model.*;
 import com.indevstudio.cpnide.server.net.PetriNetContainer;
 import io.swagger.annotations.ApiOperation;
@@ -85,6 +85,7 @@ public class SimulatorController {
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
     public ResponseEntity doStep(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("transId") String transId) {
+        System.out.println(transId);
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             String firedId =_netContainer.makeStep(sessionId, transId);
             NetInfo netInf = new NetInfo(Arrays.asList(firedId), _netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
@@ -152,16 +153,20 @@ public class SimulatorController {
         });
     }
 
+
     @PostMapping(value = "/sim/create_log")
     @ApiOperation(nickname = "Create log", value = "Create log - long running op (from mins to hours)")
     @ApiResponses(
             value = {
-                    @ApiResponse(code = 200, message = "Step success", response = CreateLog.class),
+                    @ApiResponse(code = 200, message = "Step success", response = CreateLogContainer.class),
                     @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
-    public void doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody CreateLog createLogParams) {
-        _netContainer.makeCreateLog(sessionId);
+    public ResponseEntity doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody CreateLogContainer createLogParams) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            ReplicationResp resp = _netContainer.makeCreateLog(sessionId);
+            return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
+        });
     }
 
     @PostMapping(value = "/sim/create_log_progress")

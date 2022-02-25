@@ -1,6 +1,6 @@
 package com.indevstudio.cpnide.server.net;
 
-import com.indevstudio.cpnide.server.createLog.CreateLog;
+import com.indevstudio.cpnide.server.createLog.CreateLogContainer;
 import com.indevstudio.cpnide.server.model.*;
 import com.indevstudio.cpnide.server.model.monitors.MonitorTemplate;
 import com.indevstudio.cpnide.server.model.monitors.MonitorTemplateFactory;
@@ -20,6 +20,7 @@ import org.cpntools.accesscpn.model.exporter.DOMGenerator;
 import org.cpntools.accesscpn.model.importer.DOMParser;
 import org.cpntools.accesscpn.model.monitors.Monitor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.w3c.dom.Document;
 
 import javax.annotation.PostConstruct;
@@ -45,7 +46,7 @@ public class PetriNetContainer {
     private ConcurrentHashMap<String, Checker> usersCheckers = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, HighLevelSimulator> usersSimulator = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, NetInfo> netInf = new ConcurrentHashMap<>();
-    private CreateLog createLog = new CreateLog();
+    CreateLogContainer createLogContainer;
     HighLevelSimulator _sim;
     private final static Object lock = new Object();
 
@@ -75,12 +76,16 @@ public class PetriNetContainer {
             // sim = _sim;
             // HighLevelSimulator sim = usersSimulator.get(sessionId);
             if (restartSim) {
-                if (_sim != null)
+                if (_sim != null) {
                     _sim.destroy();
+                    createLogContainer.destroy();
+                }
                 CleanOutputPathContent(sessionId);
                 _sim = HighLevelSimulator.getHighLevelSimulator(SimulatorService.getInstance().getNewSimulator());
+                createLogContainer = CreateLogContainer.getInstance();
             } else if (_sim == null)
                 _sim = HighLevelSimulator.getHighLevelSimulator(SimulatorService.getInstance().getNewSimulator());
+                createLogContainer = CreateLogContainer.getInstance();
 
             Checker checker = new Checker(net, null, _sim);
 
@@ -219,6 +224,7 @@ public class PetriNetContainer {
 
     }
 
+    //TODO make this also for createLog
      ReplicationResp getOutputPathContent(String sessionId) throws Exception {
         String pathStr = getOutputFullPathStr(sessionId);
 
@@ -631,6 +637,14 @@ public class PetriNetContainer {
         return binds.keySet().stream().map(k -> new BindingMark(k)).toArray(BindingMark[]::new);
     }
 
+    public Binding getAnyBindingFromMap(Map<String, Binding> bindings) throws Exception {
+        Map.Entry<String,Binding> entry = bindings.entrySet().iterator().next();
+        System.out.println(bindings.size());
+        Binding binding = entry.getValue();
+        //TODO MAKE RANDOM
+        return binding;
+    }
+
 
 
 
@@ -644,7 +658,7 @@ public class PetriNetContainer {
             HighLevelSimulator s = usersSimulator.get(sessionId);
             b = s.executeAndGet(getTargetTransition(s, transId));
         }
-        createLog.createActivityFromFiredBinding(b);
+        createLogContainer.createActivityFromFiredBinding(b);
         return b.getTransitionInstance().getNode().getId();
     }
 
@@ -659,6 +673,7 @@ public class PetriNetContainer {
         HighLevelSimulator s = usersSimulator.get(sessionId);
         Map<String, Binding> binds = getBindingForTransiton(s, transId);
         s.execute(binds.get(bindingId));
+        createLogContainer.createActivityFromFiredBinding(binds.get(bindingId));
     }
 
     public ReplicationResp makeReplication(String sessionId, Replication stepParam) throws Exception {
@@ -671,11 +686,12 @@ public class PetriNetContainer {
         return getOutputPathContent(sessionId);
     }
 
-    public void makeCreateLog(String sessionId) {
+    public ReplicationResp makeCreateLog(String sessionId) throws Exception {
         HighLevelSimulator sim = usersSimulator.get(sessionId);
         log.debug("Writing log to " + sim.getOutputDir());
-        createLog.CreateLog();
+        createLogContainer.CreateLog();
         log.debug("Written log to " + sim.getOutputDir());
+        return getOutputPathContent(sessionId);
     }
 
     public String runScript(String sessionId, Replication stepParam) throws Exception {
@@ -689,37 +705,34 @@ public class PetriNetContainer {
     }
 
     public String makeStepFastForward(String sessionId, MultiStep stepParam) throws Exception {
-        // String type = requestBody.get(0).get("type").toString();
-//        HighLevelSimulator sim = usersSimulator.get(sessionId);
-//        int i = 0;
-//        String simulationEnded = "";
-//        int maxSteps = stepParam.getAmount();
-//        while (i < maxSteps) {
-//            List<Instance<Transition>> enabled = new ArrayList<>();
-//            List<Instance<Transition>> all = sim.getAllTransitionInstances();
-//
-//            for (Instance<Transition> ti : all) {
-//
-//                if (sim.isEnabled(ti))
-//                    enabled.add(ti);
-//            }
-//
-//            if (enabled.isEmpty()) {
-//                String result = sim.increaseTime();
-//                if (result == null) {
-//                    continue; // --> go back and check for enabled transitions
-//                } else {
-//                    simulationEnded = result;
-//                    break; // end/stop simulation, report result to user
-//                }
-//            }
-//
-//            // fire the first enabled transition
-//            Instance<Transition> ti = enabled.get(0);
-//            sim.execute(ti);
-//            i++;
-//        }
-        _sim.execute(stepParam.getAmount());
+        //String type = RequestBody.get(0).get("type").toString();
+        HighLevelSimulator sim = usersSimulator.get(sessionId);
+        int i = 0;
+        String simulationEnded = "";
+        int maxSteps = stepParam.getAmount();
+        while (i < maxSteps) {
+            List<Instance<Transition>> enabled = new ArrayList<>();
+            List<Instance<Transition>> all = sim.getAllTransitionInstances();
+            for (Instance<Transition> ti : all) {
+                if (sim.isEnabled(ti))
+                    enabled.add(ti);
+            }
+
+            if (enabled.isEmpty()) {
+                String result = sim.increaseTime();
+                if (result == null) {
+                    continue; // --> go back and check for enabled transitions
+                } else {
+                    simulationEnded = result;
+                    break; // end/stop simulation, report result to user
+                }
+            }
+
+            Binding b = sim.executeAndGet();
+            createLogContainer.createActivityFromFiredBinding(b);
+            i++;
+        }
+        //_sim.execute(stepParam.getAmount());
 
         return getOutputPathContent(sessionId).getExtraInfo();
     }

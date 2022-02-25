@@ -29,14 +29,36 @@ import org.cpntools.accesscpn.model.monitors.Monitor;
 import org.springframework.stereotype.Component;
 import org.deckfour.spex.*;
 
-public class CreateLog {
+public class CreateLogContainer {
 
-    private XFactory factory = XFactoryRegistry.instance().currentDefault();
+    private XFactory factory;
+    private XAttributeMap traceMap;
+    private Map<String, XTrace> traces;
 
+    private static CreateLogContainer single_instance = null;
 
+    private CreateLogContainer(){
+        factory = XFactoryRegistry.instance().currentDefault();
+        traceMap = factory.createAttributeMap();
+        traces = new HashMap<>();
+    }
 
-    private XAttributeMap traceMap = factory.createAttributeMap();
-    private Map<String, XTrace> traces = new HashMap<>();
+    public static CreateLogContainer getInstance() {
+        if(single_instance == null){
+            single_instance = new CreateLogContainer();
+        }
+
+        return single_instance;
+    }
+
+    public void destroy(){
+        single_instance = null;
+    }
+
+    public void clear(){
+        single_instance.destroy();
+        getInstance();
+    }
 
     /**
      *
@@ -49,8 +71,6 @@ public class CreateLog {
             System.out.println("hi");
             log.add(trace);
         }
-        //EMPTY TRACES TODO
-        traces = new HashMap<>();
 
         File file = new File("test.xes");
         try
@@ -118,7 +138,7 @@ public class CreateLog {
         //trace.add(event);
     }
 
-    public void createActivityFromFiredBinding(Binding b){
+    public void createActivityFromFiredBinding(Binding b) throws Exception{
         String id = null;
         for(ValueAssignment assignment: b.getAllAssignments())
         {
@@ -126,10 +146,13 @@ public class CreateLog {
                 id = assignment.getValue();
             }
         }
-        System.out.println(id);
+        if(id == null){
+            System.out.println("Exception time");
+            throw new Exception("All bindings should have an variable 'x' as part of the binding");
+        }
         XTrace trace = traces.get(id);
         System.out.println(trace);
-        XEvent event = createEvent("x", id);
+        XEvent event = createEvent("concept:name", b.getTransitionInstance().getNode().getName().asString());
         if(trace == null){
             trace = factory.createTrace(traceMap);
             traces.put(id, trace);
