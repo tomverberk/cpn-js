@@ -64,13 +64,13 @@ public class PetriNetContainer {
             log.debug("After Lock: CreateNewNet");
             PetriNet net = DOMParser.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)), sessionId);
 
+
             // String fileName = "/home/semenov-k/Downloads/fuelstation_4c.cpn";
             // File file1 = new File(fileName);
             // FileInputStream in = new FileInputStream(file1);
             // PetriNet net = org.cpntools.accesscpn.model.importer.DOMParser.parse(in,
             // sessionId);
             usersNets.put(sessionId, net);
-            //
             // HighLevelSimulator sim = usersSimulator.get(sessionId);
             // if (sim == null)
             // sim = _sim;
@@ -82,10 +82,10 @@ public class PetriNetContainer {
                 }
                 CleanOutputPathContent(sessionId);
                 _sim = HighLevelSimulator.getHighLevelSimulator(SimulatorService.getInstance().getNewSimulator());
-                createLogContainer = CreateLogContainer.getInstance();
+                createLogContainer = CreateLogContainer.getInstance().getNewContainer(net);
             } else if (_sim == null)
                 _sim = HighLevelSimulator.getHighLevelSimulator(SimulatorService.getInstance().getNewSimulator());
-                createLogContainer = CreateLogContainer.getInstance();
+                createLogContainer = CreateLogContainer.getInstance().getNewContainer(net);
 
             Checker checker = new Checker(net, null, _sim);
 
@@ -658,7 +658,7 @@ public class PetriNetContainer {
             HighLevelSimulator s = usersSimulator.get(sessionId);
             b = s.executeAndGet(getTargetTransition(s, transId));
         }
-        createLogContainer.createActivityFromFiredBinding(b);
+        createLogContainer.recordActivity(b);
         return b.getTransitionInstance().getNode().getId();
     }
 
@@ -673,7 +673,7 @@ public class PetriNetContainer {
         HighLevelSimulator s = usersSimulator.get(sessionId);
         Map<String, Binding> binds = getBindingForTransiton(s, transId);
         s.execute(binds.get(bindingId));
-        createLogContainer.createActivityFromFiredBinding(binds.get(bindingId));
+        createLogContainer.recordActivity(binds.get(bindingId));
     }
 
     public ReplicationResp makeReplication(String sessionId, Replication stepParam) throws Exception {
@@ -686,10 +686,10 @@ public class PetriNetContainer {
         return getOutputPathContent(sessionId);
     }
 
-    public ReplicationResp makeCreateLog(String sessionId) throws Exception {
+    public ReplicationResp makeCreateLog(String sessionId, String caseId) throws Exception {
         HighLevelSimulator sim = usersSimulator.get(sessionId);
         log.debug("Writing log to " + sim.getOutputDir());
-        createLogContainer.CreateLog();
+        createLogContainer.CreateLog(caseId);
         log.debug("Written log to " + sim.getOutputDir());
         return getOutputPathContent(sessionId);
     }
@@ -729,12 +729,20 @@ public class PetriNetContainer {
             }
 
             Binding b = sim.executeAndGet();
-            createLogContainer.createActivityFromFiredBinding(b);
+            createLogContainer.recordActivity(b);
             i++;
         }
         //_sim.execute(stepParam.getAmount());
 
         return getOutputPathContent(sessionId).getExtraInfo();
+    }
+
+    public void setRecording(Boolean bool){
+        createLogContainer.setRecording(bool);
+    }
+
+    public void clearLog(){
+        createLogContainer.clearLog();
     }
 
 }

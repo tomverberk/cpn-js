@@ -162,9 +162,9 @@ public class SimulatorController {
                     @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
-    public ResponseEntity doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody CreateLogContainer createLogParams) {
+    public ResponseEntity doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody String caseId) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            ReplicationResp resp = _netContainer.makeCreateLog(sessionId);
+            ReplicationResp resp = _netContainer.makeCreateLog(sessionId, caseId);
             return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
         });
     }
@@ -181,6 +181,38 @@ public class SimulatorController {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             CreateLogProgressResp resp = _netContainer.getFilesForCreateLogProgress(sessionId,createLogParams);
             return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
+        });
+    }
+
+    @GetMapping(value = "/sim/record/{bool}")
+    @ApiOperation(nickname = "Change recording", value = "Change recording")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "change success"),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity changeRecording(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("bool") Boolean bool) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            _netContainer.setRecording(bool);
+            NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
+            return ResponseEntity.status(HttpStatus.OK).body(netInf);
+        });
+    }
+
+    @GetMapping(value = "/sim/clear_log")
+    @ApiOperation(nickname = "Clear log", value = "Clear log")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "clear success"),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity clearLog(@RequestHeader(value = "X-SessionId") String sessionId) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            _netContainer.clearLog();
+            NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
+            return ResponseEntity.status(HttpStatus.OK).body(netInf);
         });
     }
 

@@ -43,7 +43,7 @@ export class SimulationService {
     },
 
     createLog:{
-      repeat: 30,
+      caseId: "x",
     }
   };
 
@@ -416,7 +416,7 @@ export class SimulationService {
     );
     const config = this.simulationConfig.createLog; // 30
     const options = {
-      repeat: "" + config.repeat,
+      caseId: "" + config.caseId,
     };
     this.accessCpnService.doCreateLog(options).then(()=> {
       const modelEditorList =

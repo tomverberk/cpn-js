@@ -156,15 +156,34 @@
     <!-- Create log -->
 
     <li class="nav-item">
-      <ng-container *ngIf="!accessCpnService.isSimulation">
-        <div (click)="onCreateLog()" class="nav-link mb-0 green"
+      <ng-container *ngIf="accessCpnService.isSimulation">
+        <ng-container *ngIf="!accessCpnService.isRecordActivities">
+        <div (click)="onStartRecordActivities()" class="nav-link mb-0 green"
           [ngClass]="{'disabled': accessCpnService.initNetProcessing || accessCpnService.initSimProcessing}">
           <i class="fas fa-play"></i>
-          <span>Create Log</span>
+          <span>Record events</span>
+        </div>
+        </ng-container>
+        <ng-container *ngIf="accessCpnService.isRecordActivities">
+          <div (click)="onStopRecordActivities()" class="nav-link mb-0 red"
+            [ngClass]="{'disabled': accessCpnService.initNetProcessing || accessCpnService.initSimProcessing}">
+            <i class="fas fa-stop"></i>
+            <span>Record events</span>
+          </div>
+        </ng-container>
+      </ng-container>
+    </li>
+
+    <li class="nav-item">
+      <ng-container *ngIf="accessCpnService.isSimulation">
+        <div (click)="onClearLog()" class="nav-link mb-0">
+          <i class="fas fa-check-double"></i>
+          <span>clear log</span>
         </div>
       </ng-container>
     </li>
 
+    
 
   </ul>
 

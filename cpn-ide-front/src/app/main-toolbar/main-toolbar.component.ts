@@ -375,15 +375,20 @@ export class MainToolbarComponent implements OnInit {
       this.validationService.history.currentModelIndex;
   }
 
+  onStartRecordActivities(){
+    this.accessCpnService.setRecordActivities(true);
+  }
+
+  onStopRecordActivities(){
+    this.accessCpnService.setRecordActivities(false);
+  }
+
+  onClearLog(){
+    this.accessCpnService.doClearLog();
+  }
+
   onCreateLog() {
     //TODO check what this does
-    this.isStart = true;
-
-    //TODO check what this function does.
-    this.accessCpnService
-      .initNet(this.modelService.getProjectData(), true)
-      .then(() => {
-        this.accessCpnService.createLog();
-      });
+    
   }
 }

@@ -13,6 +13,7 @@ import { ElectronService } from "ngx-electron";
 @Injectable()
 export class AccessCpnService {
   public isSimulation = false;
+  public isRecordActivities = false;
 
   public errorData = [];
   public errorIds = [];
@@ -491,6 +492,7 @@ export class AccessCpnService {
    */
   initSim() {
     this.simulationReport = "";
+    this.isRecordActivities = false;
 
     if (this.initNetProcessing) {
       return;
@@ -890,46 +892,34 @@ export class AccessCpnService {
             );
             console.log("DATE ENDS HEEERRRE ____________________________")
             if(data) {
-              this.log = data.extraInfo;
-              this.logHtmlFiles = data.files
-              const regexFindPaths = new RegExp("\\b:\\s.*.html", "g");
-              const allPaths = this.log.match(regexFindPaths);
-              console.log(allPaths);
-              console.log(this.log);
-
-              let count = 0;
-              for (const path of allPaths) {
-                this.log = this.log.replace(
-                  path.substr(2),
-                  'a id="hrefOntResult' +
-                  count +
-                  '"href = "#">' +
-                  path.substr(2) +
-                  "</a>"
-                );
-                count++;
-              }
-              this.eventService.send(Message.SIMULATION_STEP_DONE)
+              // this.log = data.extraInfo;
+              // this.logHtmlFiles = data.files
+              // const regexFindPaths = new RegExp("\\b:\\s.*.html", "g");
+              // const allPaths = this.log.match(regexFindPaths);
+              // console.log(allPaths);
+              // console.log(this.log);
               
-              this.getSimState();
+              // this.eventService.send(Message.SIMULATION_STEP_DONE)
+              
+              // this.getSimState();
 
-              this.createLogProcessing = false;
-              resolve();
-              setTimeout(() => {
-                for(let i = 0; i < allPaths.length; i++){
-                  const lnk = document.getElementById("hrefOntResult"+ i);
-                  if( this.electronService.isElectronApp) {
-                    lnk.onclick = this.openAsPageInNewTabElectron;
-                  } else {
-                    lnk.onclick = this.openAsPageInNewTab;
-                  }
-                  const file = this.logHtmlFiles.filter(
-                    (value) => value.fileName === allPaths[i].substr(2)
-                  )[0];
-                  lnk["logHtmlFile"] = file ? file.htmlContent : "";
-                  console.log("doCreateLogTest", lnk);
-                }
-              }, 1000);
+              // this.createLogProcessing = false;
+              // resolve();
+              // setTimeout(() => {
+              //   for(let i = 0; i < allPaths.length; i++){
+              //     const lnk = document.getElementById("hrefOntResult"+ i);
+              //     if( this.electronService.isElectronApp) {
+              //       lnk.onclick = this.openAsPageInNewTabElectron;
+              //     } else {
+              //       lnk.onclick = this.openAsPageInNewTab;
+              //     }
+              //     const file = this.logHtmlFiles.filter(
+              //       (value) => value.fileName === allPaths[i].substr(2)
+              //     )[0];
+              //     lnk["logHtmlFile"] = file ? file.htmlContent : "";
+              //     console.log("doCreateLogTest", lnk);
+              //   }
+              // }, 1000);
             }
           }, 
           (error) => {
@@ -1241,10 +1231,66 @@ export class AccessCpnService {
     });
   }
 
-  createLog() {
-    this.eventService.send(Message.SERVER_INIT_CREATE_LOG_START, {});
+  doClearLog(){
+    return new Promise<void>((resolve,reject)=> {
+      if(!this.simInitialized || !this.sessionId){
+        resolve();
+        return;
+      }
 
+      console.log("AccessCPNService, doClearLog()");
+      const url =
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/clear_log";
+      this.http
+        .get(url, {headers: {"X-SessionId": this.sessionId} })
+        .subscribe(
+          (data:any)=> {
+            resolve();
+          },
+            (error) => {
+            console.error(
+              "AccessCPNService, DoCreateLog(), ERROR, data = ",
+              + error + 
+              "URL = " +
+              url
+            );
 
-    this.eventService.send(Message.SERVER_INIT_CREATE_LOG_DONE, {});
+            this.createLogProcessing = false;
+
+            this.eventService.send(Message.SERVER_ERROR, { data: error});
+            reject(error);
+          }
+        );
+    });
+    
   }
+
+  setRecordActivities(bool){
+    this.isRecordActivities = bool
+    return new Promise<void>((resolve, reject) => {
+      if (!this.simInitialized || !this.sessionId) {
+        resolve();
+        return;
+      }
+
+      console.log("AccessCpnService, setRecordActivities(), " + bool);
+
+      const url =
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/record/" + bool; // ID1412328496
+      this.http
+        .get(url, { headers: { "X-SessionId": this.sessionId } })
+        .subscribe(
+          (data: any) => {
+            resolve();
+          },
+          (error) => {
+            console.error("AccessCpnService, setRecordActivities(), ERROR, data = ", error);
+
+            this.eventService.send(Message.SERVER_ERROR, { data: error });
+            reject(error);
+          }
+        );
+    });
+  }
+
 }
