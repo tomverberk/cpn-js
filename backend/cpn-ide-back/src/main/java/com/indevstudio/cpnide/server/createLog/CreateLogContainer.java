@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
 
+import javafx.util.Pair;
 import org.cpntools.accesscpn.model.Object;
 import org.cpntools.accesscpn.model.impl.ArcImpl;
 import org.cpntools.accesscpn.model.impl.PlaceImpl;
@@ -20,18 +21,9 @@ import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.out.XSerializer;
 import org.deckfour.xes.out.XesXmlSerializer;
 import org.deckfour.xes.model.*;
-import org.cpntools.accesscpn.engine.SimulatorService;
-import org.cpntools.accesscpn.engine.highlevel.*;
-import org.cpntools.accesscpn.engine.highlevel.checker.Checker;
 import org.cpntools.accesscpn.engine.highlevel.instance.Binding;
-import org.cpntools.accesscpn.engine.highlevel.instance.Instance;
 import org.cpntools.accesscpn.engine.highlevel.instance.ValueAssignment;
 import org.cpntools.accesscpn.model.*;
-import org.cpntools.accesscpn.model.exporter.DOMGenerator;
-import org.cpntools.accesscpn.model.importer.DOMParser;
-import org.cpntools.accesscpn.model.monitors.Monitor;
-import org.springframework.stereotype.Component;
-import org.deckfour.spex.*;
 
 public class CreateLogContainer {
 
@@ -145,10 +137,40 @@ public class CreateLogContainer {
 
     }
 
-    public XEvent createEvent(String key, String value){
+    public void printBinding(Binding binding){
+        System.out.println("binding= " + binding);
+        System.out.println("getAllAssignments =" + binding.getAllAssignments());
+        System.out.println("transition name = " + binding.getTransitionInstance().getNode().getName().asString());
+        System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime());
+        System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime());
+    }
 
-        XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral(key, value, null);
-        XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time", new Date(), null);
+    public void printTrace(XTrace trace){
+        System.out.println("Trace = " + trace);
+        System.out.println("Last event = " + trace.get(trace.size()-1));
+    }
+
+    public Pair<XEvent, Integer> createEventFromBinding(Binding binding, XTrace trace){
+        printBinding(binding);
+        if (trace != null) {
+            printTrace(trace);
+        }
+        XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("concept:Name", binding.getTransitionInstance().getNode().getName().asString(), null);
+        XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", new Date(), null);
+
+        XAttributeMap event1AttributeMap = factory.createAttributeMap();
+
+        event1AttributeMap.put("ActivityName", xAttributeLiteral);
+        event1AttributeMap.put("time", xAttributeTimestamp);
+        XEvent event = factory.createEvent(event1AttributeMap);
+
+        return new Pair<>(event,0);
+    }
+
+    public XEvent createEvent(String value){
+
+        XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("concept:Name", value, null);
+        XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", new Date(), null);
 
         XAttributeMap event1AttributeMap = factory.createAttributeMap();
 
@@ -171,23 +193,23 @@ public class CreateLogContainer {
             System.out.println(gerry);
             switch(gerry){
                 case 0:
-                    trace.add(createEvent("ActivityName", "A"));
+                    trace.add(createEvent("A"));
                     System.out.println("ADD A");
                     break;
                 case 1:
-                    trace.add(createEvent("ActivityName", "B"));
+                    trace.add(createEvent( "B"));
                     System.out.println("ADD B");
                     break;
                 case 2:
-                    trace.add(createEvent("ActivityName", "C"));
+                    trace.add(createEvent("C"));
                     System.out.println("ADD C");
                     break;
                 case 3:
-                    trace.add(createEvent("ActivityName", "D"));
+                    trace.add(createEvent("D"));
                     System.out.println("ADD D");
                     break;
                 default:
-                    trace.add(createEvent("ActivityName", "E"));
+                    trace.add(createEvent("E"));
                     System.out.println("ADD E");
                     break;
             }
@@ -196,10 +218,6 @@ public class CreateLogContainer {
         return trace;
     }
 
-    public void addEventToLog(String value, String Id){
-        XEvent event = createEvent("EventName", value);
-        //trace.add(event);
-    }
 
     public Boolean isTauTransition(Binding b){
         String transitionName = b.getTransitionInstance().getNode().getName().asString();
@@ -229,13 +247,17 @@ public class CreateLogContainer {
             throw new Exception("All bindings should have an variable 'x' as part of the binding");
         }
         XTrace trace = traces.get(id);
-        System.out.println(trace);
-        XEvent event = createEvent("concept:name", b.getTransitionInstance().getNode().getName().asString());
+
+
         if(trace == null){
+            Pair<XEvent, Integer> timedEvent = createEventFromBinding(b, null);
             trace = factory.createTrace(traceMap);
+            trace.add(timedEvent.getKey());
             traces.put(id, trace);
+        } else {
+            Pair<XEvent, Integer> timedEvent = createEventFromBinding(b, trace);
+            trace.add(timedEvent.getKey());
         }
-        trace.add(event);
     }
 
     public void recordActivity(Binding b){

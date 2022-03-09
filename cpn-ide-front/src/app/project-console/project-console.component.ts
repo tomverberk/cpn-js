@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit, SystemJsNgModuleLoader } from "@angular/core";
 import { AccessCpnService } from "../services/access-cpn.service";
 import { Message } from "../common/message";
 import { EventService } from "../services/event.service";
@@ -154,6 +154,20 @@ export class ProjectConsoleComponent implements OnInit {
         "Log created in " + this.timeConversion(elapsed) + "."
       );
     });
+
+    this.eventService.on(Message.LOG_EMPTY_LOG, () => {
+      
+      this.logError("Created log is empty");
+    })
+
+    this.eventService.on(Message.LOG_UNKWOWN_CASE_ID, (error) => {
+      console.log("there is an error here")
+      console.log(error.data.error.message);
+      console.log(error.data);
+      
+      this.logError(error.data.error.message);
+      console.log("end error");
+    })
 
 
     // TOKENS

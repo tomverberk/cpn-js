@@ -924,15 +924,10 @@ export class AccessCpnService {
           }, 
           (error) => {
             console.error(
-              "AccessCPNService, DoCreateLog(), ERROR, data = ",
-              + error + 
-              "URL = " +
-              url
+              "AccessCpnService, createLog(), ERROR, data = ",
+              error
             );
-
-            this.createLogProcessing = false;
-
-            this.eventService.send(Message.SERVER_ERROR, { data: error});
+            this.eventService.send(Message.LOG_UNKWOWN_CASE_ID, { data: error });
             reject(error);
           }
         );
@@ -1172,6 +1167,7 @@ export class AccessCpnService {
               "AccessCpnService, getMonitorDefaults(), SUCCESS, data = ",
               data
             );
+            
             resolve(data);
           },
           (error) => {
@@ -1262,7 +1258,6 @@ export class AccessCpnService {
           }
         );
     });
-    
   }
 
   setRecordActivities(bool){
@@ -1285,6 +1280,45 @@ export class AccessCpnService {
           },
           (error) => {
             console.error("AccessCpnService, setRecordActivities(), ERROR, data = ", error);
+
+            this.eventService.send(Message.SERVER_ERROR, { data: error });
+            reject(error);
+          }
+        );
+    });
+  }
+
+  getIsLogEmpty() {
+    return new Promise((resolve, reject) => {
+      console.log(
+        "AccessCpnService, getIsLogEmpty(), this.sessionId = ",
+        this.sessionId
+      );
+
+      if (!this.sessionId) {
+        reject("ERROR: sessionId not defined!");
+      }
+
+      const url =
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/is_log_empty";
+      this.http
+        .get(url, { headers: { "X-SessionId": this.sessionId } })
+        .subscribe(
+          (data: any) => {
+            console.log(
+              "AccessCpnService, getIsLogEmpty(), SUCCESS, data = ",
+              data
+            )
+            if(!data){
+              this.eventService.send(Message.LOG_EMPTY_LOG)
+            }
+            resolve(data);
+          },
+          (error) => {
+            console.error(
+              "AccessCpnService, getIsLogEmpty(), ERROR, data = ",
+              error
+            );
 
             this.eventService.send(Message.SERVER_ERROR, { data: error });
             reject(error);

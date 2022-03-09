@@ -164,8 +164,29 @@ public class SimulatorController {
             })
     public ResponseEntity doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody String caseId) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            ReplicationResp resp = _netContainer.makeCreateLog(sessionId, caseId);
-            return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
+            try {
+                ReplicationResp resp = _netContainer.makeCreateLog(sessionId, caseId);
+                return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
+            } catch(Exception e){
+                System.out.println(HttpStatus.INTERNAL_SERVER_ERROR);
+                System.out.println(e);
+                return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e));
+            }
+        });
+    }
+
+    @GetMapping(value = "/sim/is_log_empty")
+    @ApiOperation(nickname = "is log empty", value = "is log empty")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "Request success", response = Boolean.class),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity isLogEmpty(@RequestHeader(value = "X-SessionId") String sessionId) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            Boolean bool = false;
+            return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(bool));
         });
     }
 

@@ -425,6 +425,14 @@ export class SimulationService {
         modelEditor.updateElementStatus(false);
       }
     })
+
+    this.accessCpnService.getIsLogEmpty().then(() => {
+      const modelEditorList =
+        this.editorPanelService.getModelEditorList() || [];
+      for (const modelEditor of modelEditorList) {
+        modelEditor.updateElementStatus(false);
+      }
+    });
   }
 
   runscript(script) {
