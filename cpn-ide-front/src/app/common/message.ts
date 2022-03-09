@@ -41,7 +41,9 @@ export class Message {
 
   static SERVER_INIT_CREATE_LOG = "server.init.create.log"
   static SERVER_INIT_CREATE_LOG_START = "server.init.create.log.start";
-  static SERVER_INIT_CREATE_LOG_DONE = "server.init.create.log.done"
+  static SERVER_INIT_CREATE_LOG_DONE = "server.init.create.log.done";
+  static LOG_EMPTY_LOG = "log.empty.log";
+  static LOG_UNKWOWN_CASE_ID = "log.unknown.case.id";
 
   static SERVER_GET_BINDINGS = "server.get.bindings";
   static SERVER_GET_SIM_STATE = "server.get.sim.state";
