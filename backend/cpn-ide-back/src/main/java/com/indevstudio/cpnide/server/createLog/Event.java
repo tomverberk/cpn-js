@@ -1,0 +1,35 @@
+package com.indevstudio.cpnide.server.createLog;
+import org.cpntools.accesscpn.engine.highlevel.instance.Binding;
+
+public class Event {
+    private Binding binding;
+    private Double time;
+    private String lifeCycleTransition;
+
+    public Event(Binding binding, Double time, String lifeCycleTransition){
+        this.binding = binding;
+        this.time = time;
+        this.lifeCycleTransition = lifeCycleTransition;
+    }
+
+    public Binding getBinding(){
+        return this.binding;
+    }
+
+    public Double getTime(){
+        return this.time;
+    }
+
+    public Boolean isCreateEvent(){
+        return lifeCycleTransition.equals("created");
+    }
+
+    public Boolean isCompleteEvent(){
+        return lifeCycleTransition.equals("completed");
+    }
+
+    public String getLifeCycleTransition(){
+        return this.lifeCycleTransition;
+    }
+
+}

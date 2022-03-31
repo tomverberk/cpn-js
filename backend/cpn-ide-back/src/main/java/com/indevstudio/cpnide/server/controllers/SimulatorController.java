@@ -1,5 +1,6 @@
 package com.indevstudio.cpnide.server.controllers;
 
+import com.indevstudio.cpnide.server.createLog.CreateLogConfig;
 import com.indevstudio.cpnide.server.createLog.CreateLogContainer;
 import com.indevstudio.cpnide.server.model.*;
 import com.indevstudio.cpnide.server.net.PetriNetContainer;
@@ -7,6 +8,9 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
+import org.deckfour.xes.info.XLogInfo;
+import org.deckfour.xes.model.XLog;
+import org.deckfour.xes.model.impl.XLogImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -76,6 +80,32 @@ public class SimulatorController {
         return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.getState(sessionId)));
     }
 
+    @GetMapping(value = "/sim/get_log")
+    @ApiOperation(nickname = "Get created log", value = "Get created log")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "success", response = XLogImpl.class),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity getLog(@RequestHeader(value = "X-SessionId") String sessionId) {
+        XLog log = _netContainer.getLog(sessionId);
+        System.out.println(log.getClass());
+        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.getLog(sessionId)));
+    }
+
+    @GetMapping(value = "/sim/get_output_path")
+    @ApiOperation(nickname = "Get outputPath", value = "Get outputPath")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "success", response = String.class),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity getOutputPath(@RequestHeader(value = "X-SessionId") String sessionId) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.getOutputPath()));
+    }
+
     @GetMapping(value = "/sim/step/{transId}")
     @ApiOperation(nickname = "Do simulation step", value = "Do simulation step")
     @ApiResponses(
@@ -88,6 +118,7 @@ public class SimulatorController {
         System.out.println(transId);
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             String firedId =_netContainer.makeStep(sessionId, transId);
+            SimInfo info = _netContainer.getState(sessionId);
             NetInfo netInf = new NetInfo(Arrays.asList(firedId), _netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             return ResponseEntity.status(HttpStatus.OK).body(netInf);
         });
@@ -114,6 +145,7 @@ public class SimulatorController {
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
     public ResponseEntity doStepFastForward(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody MultiStep stepParams) {
+        System.out.println(stepParams);
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             String content = _netContainer.makeStepFastForward(sessionId,stepParams);
             final NetInfo netInf = new NetInfo(Arrays.asList(), _netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
@@ -162,10 +194,11 @@ public class SimulatorController {
                     @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
-    public ResponseEntity doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody String caseId) {
+    public ResponseEntity doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody CreateLogConfig createLogConfig) {
+        System.out.println(createLogConfig);
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             try {
-                ReplicationResp resp = _netContainer.makeCreateLog(sessionId, caseId);
+                ReplicationResp resp = _netContainer.makeCreateLog(sessionId, createLogConfig);
                 return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
             } catch(Exception e){
                 System.out.println(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -185,7 +218,7 @@ public class SimulatorController {
             })
     public ResponseEntity isLogEmpty(@RequestHeader(value = "X-SessionId") String sessionId) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            Boolean bool = false;
+            Boolean bool = _netContainer.isLogEmpty(sessionId);
             return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(bool));
         });
     }
@@ -216,6 +249,22 @@ public class SimulatorController {
     public ResponseEntity changeRecording(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("bool") Boolean bool) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             _netContainer.setRecording(bool);
+            NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
+            return ResponseEntity.status(HttpStatus.OK).body(netInf);
+        });
+    }
+
+    @GetMapping(value = "/sim/outputpath/{path}")
+    @ApiOperation(nickname = "set outputPath", value = "set outputPath")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "set success"),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity setOutputPath(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("path") String path) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            _netContainer.setOutputPath(sessionId, path);
             NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             return ResponseEntity.status(HttpStatus.OK).body(netInf);
         });

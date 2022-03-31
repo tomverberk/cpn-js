@@ -1,5 +1,6 @@
 package com.indevstudio.cpnide.server.net;
 
+import com.indevstudio.cpnide.server.createLog.CreateLogConfig;
 import com.indevstudio.cpnide.server.createLog.CreateLogContainer;
 import com.indevstudio.cpnide.server.model.*;
 import com.indevstudio.cpnide.server.model.monitors.MonitorTemplate;
@@ -14,11 +15,13 @@ import org.cpntools.accesscpn.engine.highlevel.*;
 import org.cpntools.accesscpn.engine.highlevel.checker.Checker;
 import org.cpntools.accesscpn.engine.highlevel.instance.Binding;
 import org.cpntools.accesscpn.engine.highlevel.instance.Instance;
+import org.cpntools.accesscpn.engine.highlevel.instance.Marking;
 import org.cpntools.accesscpn.engine.highlevel.instance.ValueAssignment;
 import org.cpntools.accesscpn.model.*;
 import org.cpntools.accesscpn.model.exporter.DOMGenerator;
 import org.cpntools.accesscpn.model.importer.DOMParser;
 import org.cpntools.accesscpn.model.monitors.Monitor;
+import org.deckfour.xes.model.XLog;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.w3c.dom.Document;
@@ -47,6 +50,7 @@ public class PetriNetContainer {
     private ConcurrentHashMap<String, HighLevelSimulator> usersSimulator = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, NetInfo> netInf = new ConcurrentHashMap<>();
     CreateLogContainer createLogContainer;
+    TokenController tokenController;
     HighLevelSimulator _sim;
     private final static Object lock = new Object();
 
@@ -79,13 +83,16 @@ public class PetriNetContainer {
                 if (_sim != null) {
                     _sim.destroy();
                     createLogContainer.destroy();
+                    tokenController.destroy();
                 }
                 CleanOutputPathContent(sessionId);
                 _sim = HighLevelSimulator.getHighLevelSimulator(SimulatorService.getInstance().getNewSimulator());
                 createLogContainer = CreateLogContainer.getInstance().getNewContainer(net);
+                tokenController = TokenController.getInstance().getNewController();
             } else if (_sim == null)
                 _sim = HighLevelSimulator.getHighLevelSimulator(SimulatorService.getInstance().getNewSimulator());
                 createLogContainer = CreateLogContainer.getInstance().getNewContainer(net);
+            tokenController = TokenController.getInstance().getNewController();
 
             Checker checker = new Checker(net, null, _sim);
 
@@ -96,7 +103,6 @@ public class PetriNetContainer {
 
             usersCheckers.put(sessionId, checker);
             usersSimulator.put(sessionId, _sim);
-
         }
     }
 
@@ -651,14 +657,17 @@ public class PetriNetContainer {
     public String makeStep(String sessionId, String transId) throws Exception {
         // String type = requestBody.get(0).get("type").toString();
         Binding b = null;
+        HighLevelSimulator s = usersSimulator.get(sessionId);
         if (transId.equals("multistep")) {
-            HighLevelSimulator s = usersSimulator.get(sessionId);
             b = s.executeAndGet();
         } else {
-            HighLevelSimulator s = usersSimulator.get(sessionId);
             b = s.executeAndGet(getTargetTransition(s, transId));
         }
-        createLogContainer.recordActivity(b);
+        List<PlaceMark> marking = returnTokensAndMarking(sessionId);
+
+        tokenController.updateMarking(returnTokensAndMarking(sessionId));
+        Double timeLastChanged = tokenController.getSmallestTimeTokenLastChanged();
+        createLogContainer.recordActivity(b, getState(sessionId), timeLastChanged);
         return b.getTransitionInstance().getNode().getId();
     }
 
@@ -668,12 +677,31 @@ public class PetriNetContainer {
         return SimInfo.builder().step(s.getStep().longValueExact()).time(s.getTime()).build();
     }
 
+    public XLog getLog(String sessionId) {
+        return createLogContainer.getLog();
+    }
+
+    public String getOutputPath() { return createLogContainer.getOutputPath(); }
+
+    public void setOutputPath(String sessionId, String path) {
+        HighLevelSimulator sim = usersSimulator.get(sessionId);
+        createLogContainer.setOutputPath(path, sim.getOutputDir());
+    }
+
+    public Boolean isLogEmpty(String sessionId) {
+        return createLogContainer.isLogEmpty();
+    }
+
     public void makeStepWithBinding(String sessionId, String bindingId, String transId) throws Exception {
         // String type = requestBody.get(0).get("type").toString();
         HighLevelSimulator s = usersSimulator.get(sessionId);
         Map<String, Binding> binds = getBindingForTransiton(s, transId);
         s.execute(binds.get(bindingId));
-        createLogContainer.recordActivity(binds.get(bindingId));
+        SimInfo simInfo = getState(sessionId);
+        List<PlaceMark> marking = getTokensAndMarking(sessionId);
+        tokenController.updateMarking(returnTokensAndMarking(sessionId));
+        Double timeLastChanged = tokenController.getSmallestTimeTokenLastChanged();
+        createLogContainer.recordActivity(binds.get(bindingId), getState(sessionId), timeLastChanged);
     }
 
     public ReplicationResp makeReplication(String sessionId, Replication stepParam) throws Exception {
@@ -686,10 +714,10 @@ public class PetriNetContainer {
         return getOutputPathContent(sessionId);
     }
 
-    public ReplicationResp makeCreateLog(String sessionId, String caseId) throws Exception {
+    public ReplicationResp makeCreateLog(String sessionId, CreateLogConfig config) throws Exception {
         HighLevelSimulator sim = usersSimulator.get(sessionId);
         log.debug("Writing log to " + sim.getOutputDir());
-        createLogContainer.CreateLog(caseId);
+        createLogContainer.CreateLog(config);
         log.debug("Written log to " + sim.getOutputDir());
         return getOutputPathContent(sessionId);
     }
@@ -729,7 +757,10 @@ public class PetriNetContainer {
             }
 
             Binding b = sim.executeAndGet();
-            createLogContainer.recordActivity(b);
+            List<PlaceMark> marking = getTokensAndMarking(sessionId);
+            tokenController.updateMarking(returnTokensAndMarking(sessionId));
+            Double timeLastChanged = tokenController.getSmallestTimeTokenLastChanged();
+            createLogContainer.recordActivity(b, getState(sessionId), timeLastChanged);
             i++;
         }
         //_sim.execute(stepParam.getAmount());

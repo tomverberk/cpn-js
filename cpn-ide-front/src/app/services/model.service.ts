@@ -40,6 +40,7 @@ export class ModelService {
   public project = undefined;
   public projectData = undefined;
   public projectName = "";
+  public logName = "";
   public selectedElements = [];
 
   private backupModel = [];
@@ -117,6 +118,7 @@ export class ModelService {
     this.project = project;
     this.projectData = project.data;
     this.projectName = project.name;
+    this.logName = project.logName;
 
     this.updatePlaceTypes();
     this.updateInstances();

@@ -7,17 +7,25 @@ package com.indevstudio.cpnide.server.createLog;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.sql.Array;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
+import com.indevstudio.cpnide.server.model.PlaceMark;
+import com.indevstudio.cpnide.server.model.SimInfo;
 import javafx.util.Pair;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.cpntools.accesscpn.model.Object;
 import org.cpntools.accesscpn.model.impl.ArcImpl;
 import org.cpntools.accesscpn.model.impl.PlaceImpl;
 import org.cpntools.accesscpn.model.impl.TransitionImpl;
 import org.deckfour.xes.factory.XFactory;
 import org.deckfour.xes.factory.XFactoryRegistry;
+import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
+import org.deckfour.xes.model.XTrace;
 import org.deckfour.xes.out.XSerializer;
 import org.deckfour.xes.out.XesXmlSerializer;
 import org.deckfour.xes.model.*;
@@ -27,6 +35,7 @@ import org.cpntools.accesscpn.model.*;
 
 public class CreateLogContainer {
 
+    private XLog log;
     private XFactory factory;
     private XAttributeMap traceMap;
     private Map<String, XTrace> traces;
@@ -34,8 +43,12 @@ public class CreateLogContainer {
     private String caseId = "x";
     private PetriNet net;
     private List<String> tauTransitions = new LinkedList<>();
-    Queue<Binding> bindingQueue = new LinkedList<>();
-    Queue<Binding> backupBindingQueue = new LinkedList<>();
+    private String pathName;
+    private long startTimeLong;
+    private String timeUnit;
+    private Long timeUnitMultiplier;
+    Queue<Event> bindingQueue = new LinkedList<>();
+    Queue<Event> backupBindingQueue = new LinkedList<>();
 
     private static CreateLogContainer single_instance = null;
 
@@ -75,7 +88,6 @@ public class CreateLogContainer {
                 if(((TransitionImpl) object).getNodeGraphics().getFill().getColor().equals("Black")){
                     System.out.println("This is a tau transition");
                     this.tauTransitions.add(object.getName().asString());
-
                 }
 
             } else if (object instanceof ArcImpl){
@@ -83,8 +95,6 @@ public class CreateLogContainer {
             } else {
                 System.out.println("this is something else");
             }
-            System.out.println(object.getName().asString());
-            object.getClass();
             System.out.println("end object");
         }
 
@@ -103,20 +113,63 @@ public class CreateLogContainer {
         single_instance = getInstance();
     }
 
+    public void setConfig(CreateLogConfig config) throws Exception {
+        setCaseId(config.caseId);
+        setStartTime(config.startDateTime);
+        setTimeUnits(config.timeUnit);
+    }
+
+    public void setTimeUnits(String timeUnit) throws Exception {
+        String timeUnitLowerCase = timeUnit.toLowerCase();
+        switch(timeUnitLowerCase){
+            case "years": case "year": case "y":
+                this.timeUnit = "year";
+                this.timeUnitMultiplier = (long) 1000 * 60 * 60 * 24 * 365;
+                break;
+            case "months": case "month":
+                this.timeUnit = "month";
+                this.timeUnitMultiplier = (long) 1000 * 60 * 60 * 24 * 30;
+                break;
+            case "weeks": case "week": case "w":
+                this.timeUnit = "week";
+                this.timeUnitMultiplier = (long) 1000 * 60 * 60 * 24 * 7;
+                break;
+            case "days": case "day": case "d":
+                this.timeUnit = "days";
+                this.timeUnitMultiplier = (long) 1000 * 60 * 60 * 24;
+                break;
+            case "hours": case "hour": case "h":
+                this.timeUnit = "week";
+                this.timeUnitMultiplier = (long) 1000 * 60 * 60;
+                break;
+            case "minutes": case "minute":
+                this.timeUnit = "minute";
+                this.timeUnitMultiplier = (long) 1000 * 60;
+                break;
+            case "seconds": case "second": case "s":
+                this.timeUnit = "second";
+                this.timeUnitMultiplier = (long) 1000;
+                break;
+            default:
+                System.out.println("no correct timeUnit given");
+                throw new IllegalArgumentException(timeUnit + " is not a valid timeunit");
+        }
+    }
+
     /**
      *
      */
-    public void CreateLog(String caseId) throws Exception {
-        setCaseId(caseId);
+    public void CreateLog(CreateLogConfig config) throws Exception {
+        setConfig(config);
         XAttributeMap logMap = factory.createAttributeMap();
-        XLog log = factory.createLog(logMap);
+        log = factory.createLog(logMap);
         traceMap = factory.createAttributeMap();
-        traces = new HashMap<>();
-        Binding b;
+        traces = new HashMap<String, XTrace>();
+        Event event;
         while(!bindingQueue.isEmpty()){
-            b = bindingQueue.poll();
-            createActivityFromFiredBinding(b);
-            backupBindingQueue.add(b);
+            event = bindingQueue.poll();
+            createActivityFromFiredBinding(event);
+            backupBindingQueue.add(event);
         }
 
         for(XTrace trace : traces.values())
@@ -124,10 +177,11 @@ public class CreateLogContainer {
             log.add(trace);
         }
 
+        //TODO REREPLACE THIS WITH FILENAME
         File file = new File("test.xes");
         try
         {
-            export(log, file);
+            export(file);
         } catch(Exception e) {
             System.out.println("Something went wrong in writing a file");
         }
@@ -137,12 +191,19 @@ public class CreateLogContainer {
 
     }
 
+    public void setStartTime(String startDateTime) throws ParseException {
+        String modifiedStartDateTimeString = startDateTime.replace("T", " ");
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        Date date = formatter.parse(modifiedStartDateTimeString);
+        startTimeLong = date.getTime();
+    }
+
     public void printBinding(Binding binding){
         System.out.println("binding= " + binding);
         System.out.println("getAllAssignments =" + binding.getAllAssignments());
         System.out.println("transition name = " + binding.getTransitionInstance().getNode().getName().asString());
         System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime());
-        System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime());
+        System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime().asString().replace("@", "").replace(" ", "").replace("+", ""));
     }
 
     public void printTrace(XTrace trace){
@@ -150,21 +211,108 @@ public class CreateLogContainer {
         System.out.println("Last event = " + trace.get(trace.size()-1));
     }
 
-    public Pair<XEvent, Integer> createEventFromBinding(Binding binding, XTrace trace){
+    public Integer getTimeFromBinding(Binding binding){
+        String string = binding.getTransitionInstance().getNode().getTime().asString();
+        string = string.replace("@", "").replace(" ", "").replace("+", "");
+        Integer addedTime = 0;
+        if(string.equals("")){
+            return 0;
+        } else {
+            try {
+                addedTime = Integer.parseInt(string);
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return addedTime;
+    }
+
+    public XEvent createEventFromBinding(Event event, XTrace trace){
+        XAttributeMap event1AttributeMap = factory.createAttributeMap();
+        Binding binding = event.getBinding();
+        Double eventTime = event.getTime();
         printBinding(binding);
+        //Integer addedTimeByBinding = getTimeFromBinding(binding);
         if (trace != null) {
             printTrace(trace);
         }
-        XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("concept:Name", binding.getTransitionInstance().getNode().getName().asString(), null);
-        XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", new Date(), null);
 
-        XAttributeMap event1AttributeMap = factory.createAttributeMap();
-
-        event1AttributeMap.put("ActivityName", xAttributeLiteral);
+        // Add time to the event
+        long eventTimeTransformed = (long) (eventTime * timeUnitMultiplier + startTimeLong);
+        XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", eventTimeTransformed, null);
         event1AttributeMap.put("time", xAttributeTimestamp);
-        XEvent event = factory.createEvent(event1AttributeMap);
 
-        return new Pair<>(event,0);
+        // Add lifeCycle transition
+        if(event.isCreateEvent()){
+            XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("lifecycle:transition", event.getLifeCycleTransition(), null);
+            event1AttributeMap.put("lifecycle:transition", xAttributeLiteral);
+        } else if(event.isCompleteEvent()){
+            XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("lifecycle:transition", event.getLifeCycleTransition(), null);
+            event1AttributeMap.put("lifecycle:transition", xAttributeLiteral);
+        }
+
+        // Add concept:name and other attributes
+        Queue<Pair<String, String>> transitionInfo = getTransitionInfoFromBinding(binding);
+        for(Pair<String, String> pair: transitionInfo){
+            XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral(pair.getKey(), pair.getValue(), null);
+            event1AttributeMap.put(pair.getKey(), xAttributeLiteral);
+        }
+
+        // ADD traceID to the event
+        XAttributeLiteral xAttributeLiteralCaseId = factory.createAttributeLiteral("traceId", binding.getValueAssignment(caseId).getValue(), null);
+        event1AttributeMap.put("traceId", xAttributeLiteralCaseId);
+
+        // create the event from the eventMap
+        XEvent xEvent = factory.createEvent(event1AttributeMap);
+
+        return xEvent;
+    }
+
+    public Queue<Pair<String, String>> getTransitionInfoFromBinding(Binding b){
+        String transitionString = b.getTransitionInstance().getNode().getName().asString();
+        Queue<Pair<String, String>> info = new LinkedList<Pair<String, String>>();
+        String transitionSubString = transitionString;
+        Integer indexOfLastPlus = 0;
+        Integer plusCount = 0;
+        if(!transitionString.contains("+")){
+            info.add(new Pair("concept:name", transitionString));
+        } else {
+            while(transitionSubString.contains("+")){
+                Integer indexOfPlus = transitionSubString.indexOf("+");
+                indexOfLastPlus = indexOfLastPlus + indexOfPlus;
+                transitionSubString = transitionSubString.substring(indexOfPlus+1);
+                plusCount ++;
+            }
+            if(isLifeCycleTransition(transitionSubString)) {
+                info.add(new Pair("concept_name", transitionString.substring(0, indexOfLastPlus + plusCount - 1)));
+                info.add(new Pair("lifecycle:transition", transitionSubString));
+            } else {
+                info.add(new Pair("concept:name", transitionString));
+            }
+        }
+
+        return info;
+    }
+
+    public Boolean isLifeCycleTransition(String transitionSubString){
+        switch(transitionSubString){
+            case "schedule" :
+            case "assign":
+            case "reassign":
+            case "start":
+            case "suspend":
+            case "resume":
+            case "complete":
+            case "withdraw":
+            case "autoskip":
+            case "manualskip":
+            case "abort_activity":
+            case "abort_case":
+                return true;
+            default:
+                return false;
+        }
     }
 
     public XEvent createEvent(String value){
@@ -229,7 +377,8 @@ public class CreateLogContainer {
         return false;
     }
 
-    public void createActivityFromFiredBinding(Binding b) throws Exception{
+    public void createActivityFromFiredBinding(Event event) throws Exception{
+        Binding b = event.getBinding();
         String id = null;
         if(isTauTransition(b)){
             return;
@@ -242,49 +391,88 @@ public class CreateLogContainer {
                 id = assignment.getValue();
             }
         }
+
         if(id == null){
-            System.out.println("Exception time");
-            throw new Exception("All bindings should have an variable 'x' as part of the binding");
+            System.out.println("Ignore this binding");
+            return;
         }
         XTrace trace = traces.get(id);
 
-
         if(trace == null){
-            Pair<XEvent, Integer> timedEvent = createEventFromBinding(b, null);
+            XEvent xEvent = createEventFromBinding(event, null);
             trace = factory.createTrace(traceMap);
-            trace.add(timedEvent.getKey());
+            trace.add(xEvent);
             traces.put(id, trace);
         } else {
-            Pair<XEvent, Integer> timedEvent = createEventFromBinding(b, trace);
-            trace.add(timedEvent.getKey());
+            XEvent xEvent = createEventFromBinding(event, traces.get(id));
+            trace.add(xEvent);
         }
     }
 
-    public void recordActivity(Binding b){
+    public void recordActivity(Binding b, SimInfo info, Double endTimeActivity){
         if(!isRecording) {
             return;
         }
-        bindingQueue.add(b);
+        System.out.println(info.getTime());
+        Double simulatorTime = makeTimeDouble(info.getTime());
+        bindingQueue.add(new Event(b, simulatorTime, "created"));
+        if(endTimeActivity!= null){
+            bindingQueue.add(new Event(b, endTimeActivity, "completed"));
+        } else {
+            bindingQueue.add(new Event(b, simulatorTime, "completed"));
+        }
+
     }
 
-    public static void export(XLog log, File file) throws IOException {
+    public Double makeTimeDouble(String stringTime){
+        if(stringTime == ""){
+            return 0.0;
+        } else {
+            return Double.parseDouble(stringTime);
+        }
+    }
+
+    public void export(File file) throws IOException {
         FileOutputStream out = new FileOutputStream(file);
         XSerializer logSerializer = new XesXmlSerializer();
+
         logSerializer.serialize(log, out);
         out.close();
+    }
+
+    public void setOutputPath(String path, String outputDir){
+        this.pathName = outputDir + "/" + path;
+        this.pathName = path;
+    }
+
+    public String getOutputPath(){
+        return this.pathName;
+    }
+
+    public XLog getLog(){
+        System.out.println(log.toString());
+        return this.log;
     }
 
     public void setRecording(Boolean bool){
         this.isRecording = bool;
     }
 
-    public void setCaseId(String caseId){
-        System.out.println(caseId);
-        caseId = caseId.substring(11, caseId.length()-2);
-        System.out.println(caseId);
-        if(!caseId.equals(this.caseId)){
-
+    public Boolean isLogEmpty(){
+        if (bindingQueue.size() == 0){
+            return true;
+        } else {
+            return false;
         }
+    }
+
+    public void setCaseId(String caseId){
+//        System.out.println(caseId);
+//        caseId = caseId.substring(11, caseId.length()-2);
+//        System.out.println(caseId);
+//        if(!caseId.equals(this.caseId)){
+//
+//        }
         this.caseId = caseId;
     }
 

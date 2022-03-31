@@ -8,6 +8,7 @@ import { DialogComponent } from "../common/dialog/dialog.component";
 import { DialogLogComponent } from "../common/dialog-log/dialog-log.component";
 import { EditorPanelService } from "../services/editor-panel.service";
 import { ModelService } from "../services/model.service";
+import { data } from "jquery";
 
 @Component({
   selector: "app-project-console",
@@ -168,6 +169,10 @@ export class ProjectConsoleComponent implements OnInit {
       this.logError(error.data.error.message);
       console.log("end error");
     })
+
+    this.eventService.on(Message.LOG_SAVED, (data) => {
+      this.logSuccess("Path saved at: " + data.path)
+    });
 
 
     // TOKENS

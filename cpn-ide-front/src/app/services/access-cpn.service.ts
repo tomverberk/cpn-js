@@ -865,7 +865,6 @@ export class AccessCpnService {
   }
 
   doCreateLog(options) {
-    this.log = "HALLO";
     console.log("start doCreateLog")
     return new Promise<void>((resolve,reject)=> {
       if(!this.simInitialized || !this.sessionId){
@@ -1309,7 +1308,7 @@ export class AccessCpnService {
               "AccessCpnService, getIsLogEmpty(), SUCCESS, data = ",
               data
             )
-            if(!data){
+            if(data){
               this.eventService.send(Message.LOG_EMPTY_LOG)
             }
             resolve(data);
@@ -1319,6 +1318,112 @@ export class AccessCpnService {
               "AccessCpnService, getIsLogEmpty(), ERROR, data = ",
               error
             );
+
+            this.eventService.send(Message.SERVER_ERROR, { data: error });
+            reject(error);
+          }
+        );
+    });
+  }
+
+  getLog(){
+    return new Promise((resolve, reject) => {
+      console.log(
+        "AccessCpnService, getLog(), this.sessionId = ",
+        this.sessionId
+      );
+
+      if (!this.sessionId) {
+        reject("ERROR: sessionId not defined!");
+      }
+
+      const url =
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/get_log";
+      this.http
+        .get(url, { headers: { "X-SessionId": this.sessionId } })
+        .subscribe(
+          (data: any) => {
+            console.log(
+              "AccessCpnService, getLog(), SUCCESS, data = ",
+              data
+            )
+            if(!data){
+              this.eventService.send(Message.LOG_EMPTY_LOG)
+            }
+            resolve(data);
+          },
+          (error) => {
+            console.error(
+              "AccessCpnService, getLog(), ERROR, data = ",
+              error
+            );
+
+            this.eventService.send(Message.SERVER_ERROR, { data: error });
+            reject(error);
+          }
+        );
+    });
+  }
+
+  getOutputPathLog(){
+    return new Promise((resolve, reject) => {
+      console.log(
+        "AccessCpnService, getOutputPathLog(), this.sessionId = ",
+        this.sessionId
+      );
+
+      if (!this.sessionId) {
+        reject("ERROR: sessionId not defined!");
+      }
+
+      const url =
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/get_output_path";
+      this.http
+        .get(url, { headers: { "X-SessionId": this.sessionId } })
+        .subscribe(
+          (data: any) => {
+            console.log(
+              "AccessCpnService, getOutputPathLog(), SUCCESS, data = ",
+              data
+            )
+            resolve(data);
+          },
+          (error) => {
+            console.error(
+              "AccessCpnService, getOutputPathLog(), ERROR, data = ",
+              error
+            );
+
+            this.eventService.send(Message.SERVER_ERROR, { data: error });
+            reject(error);
+          }
+        );
+    });
+  }
+
+
+  setOutputPathLog(filePath){
+    if (!filePath.toLowerCase().includes(".xes")) {
+      filePath += ".xes";
+    }
+    return new Promise<void>((resolve, reject) => {
+      if (!this.simInitialized || !this.sessionId) {
+        resolve();
+        return;
+      }
+
+      console.log("AccessCpnService, setOutputPath(), " + filePath);
+
+      const url =
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/outputpath/" + filePath; // ID1412328496
+      this.http
+        .get(url, { headers: { "X-SessionId": this.sessionId } })
+        .subscribe(
+          (data: any) => {
+            resolve();
+          },
+          (error) => {
+            console.error("AccessCpnService, setOutputPath(), ERROR, data = ", error);
 
             this.eventService.send(Message.SERVER_ERROR, { data: error });
             reject(error);

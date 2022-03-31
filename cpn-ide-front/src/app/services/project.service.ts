@@ -183,8 +183,9 @@ export class ProjectService {
   /**
    * Save current project to file
    * @filename - name of file
+   * @isNet - True when the to save object is a net, false when the to save object is a log
    */
-  public saveToFile(filename: string) {
+  public saveProjectToFile(filename: string) {
     if (!filename.toLowerCase().includes(".cpn")) {
       filename += ".cpn";
     }
@@ -209,6 +210,7 @@ export class ProjectService {
       this.setModelName(newFileName);
     });
   }
+
 
   public getStringProjectDataForSave() {
     const x2js = new X2JS();

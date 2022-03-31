@@ -256,8 +256,10 @@ export class MainToolbarComponent implements OnInit {
   }
 
   onSaveProject(isSaveAs) {
+    console.log(isSaveAs);
     this.onStopSimulation();
     const fs = this.accessCpnService.getFs();
+    console.log(fs);
     if (fs && !isSaveAs) {
       fs.fs.writeFile(
         fs.path,
@@ -268,7 +270,7 @@ export class MainToolbarComponent implements OnInit {
       );
     } else {
       if (this.electronService.isElectronApp) {
-        this.projectService.saveToFile(this.modelService.projectName);
+        this.projectService.saveProjectToFile(this.modelService.projectName);
       } else {
         const dialogRef = this.dialog.open(DialogComponent, {
           width: "500px",
@@ -288,7 +290,7 @@ export class MainToolbarComponent implements OnInit {
             );
 
             // Save to file
-            this.projectService.saveToFile(data.input[0].value);
+            this.projectService.saveProjectToFile(data.input[0].value);
             this.projectService.setModelName(data.input[0].value);
           }
         });
@@ -325,7 +327,7 @@ export class MainToolbarComponent implements OnInit {
             case DialogComponent.YES:
               // Save to file
               // this.projectService.saveToFile(data.input[0].value);
-              this.projectService.saveToFile(this.modelService.projectName);
+              this.projectService.saveProjectToFile(this.modelService.projectName);
 
               resolve();
               return;
@@ -388,7 +390,7 @@ export class MainToolbarComponent implements OnInit {
   }
 
   onCreateLog() {
-    //TODO check what this does
+    
     
   }
 }

@@ -198,8 +198,22 @@
       <tr>
         <td>CaseId</td>
         <td>
-          <input type="string" value="x" class="full-width"
+          <input type="string" class="full-width"
             [(ngModel)]="simulationService.simulationConfig.createLog.caseId">
+        </td>
+      </tr>
+      <tr>
+        <td>StartingMoment</td>
+        <td>
+          <input type="datetime-local" class = "full-width"
+            [(ngModel)]="simulationService.simulationConfig.createLog.startDateTime">
+        </td>
+      </tr>
+      <tr>
+        <td>TimeUnit</td>
+        <td>
+          <input type="string" class="full-width"
+            [(ngModel)]="simulationService.simulationConfig.createLog.timeUnit">
         </td>
       </tr>
       <tr>

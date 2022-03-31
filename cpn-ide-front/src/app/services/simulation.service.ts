@@ -4,6 +4,10 @@ import { AccessCpnService } from "./access-cpn.service";
 import { ModelService } from "./model.service";
 import { Message } from "../common/message";
 import { EditorPanelService } from "./editor-panel.service";
+import { FileService } from "./file.service";
+import * as X2JS from "../../lib/x2js/xml2json.js";
+import { cloneObject } from "src/app/common/utils";
+import { time } from "console";
 
 @Injectable({
   providedIn: "root",
@@ -21,6 +25,7 @@ export class SimulationService {
   firedTransitionIdList = [];
   firedTransitionBindId;
   firedId;
+  outputPath;
 
   multiStepCount = 0;
   multiStepLastTimeMs = 0;
@@ -44,6 +49,8 @@ export class SimulationService {
 
     createLog:{
       caseId: "x",
+      startDateTime: "1970-01-01T00:00",
+      timeUnit: "day",
     }
   };
 
@@ -54,7 +61,8 @@ export class SimulationService {
     private eventService: EventService,
     public accessCpnService: AccessCpnService,
     public modelService: ModelService,
-    private editorPanelService: EditorPanelService
+    private editorPanelService: EditorPanelService,
+    private fileService: FileService,
   ) {
     this.initEvents();
   }
@@ -408,7 +416,7 @@ export class SimulationService {
     });
   }
 
-  runCreateLog(){
+  runCreateLog(path){
     console.log(
       this.constructor.name,
       "runCreateLog(), this.simulationConfig.CreateLog = ",
@@ -416,15 +424,22 @@ export class SimulationService {
     );
     const config = this.simulationConfig.createLog; // 30
     const options = {
-      caseId: "" + config.caseId,
+      caseId: config.caseId,
+      startDateTime: config.startDateTime,
+      timeUnit: config.timeUnit,
     };
-    this.accessCpnService.doCreateLog(options).then(()=> {
-      const modelEditorList =
-        this.editorPanelService.getModelEditorList() || [];
-      for (const modelEditor of modelEditorList) {
-        modelEditor.updateElementStatus(false);
-      }
-    })
+
+    this.accessCpnService.setOutputPathLog(path).then(() => {
+      //this.outputPath = this.accessCpnService.getOutputPathLog()}).then(() => {
+      this.accessCpnService.doCreateLog(options)}).then(()=> {
+        const modelEditorList =
+          this.editorPanelService.getModelEditorList() || [];
+        for (const modelEditor of modelEditorList) {
+          modelEditor.updateElementStatus(false);
+        }
+      })
+    
+    
 
     this.accessCpnService.getIsLogEmpty().then(() => {
       const modelEditorList =
@@ -433,6 +448,17 @@ export class SimulationService {
         modelEditor.updateElementStatus(false);
       }
     });
+
+    console.log(this.outputPath);
+    this.eventService.send(Message.LOG_SAVED, {path: this.outputPath});
+  }
+
+  setOutputPath(path){
+    this.accessCpnService.setOutputPathLog(path);
+  }
+
+  getOutputPath(){
+    this.outputPath = this.accessCpnService.getOutputPathLog();
   }
 
   runscript(script) {
@@ -444,6 +470,28 @@ export class SimulationService {
       for (const modelEditor of modelEditorList) {
         modelEditor.updateElementStatus(false);
       }
+    });
+  }
+
+  public saveLogToFile(filename: string) {
+    if (!filename.toLowerCase().includes(".xes")) {
+      filename += ".xes";
+    }
+
+    const x2js = new X2JS();
+    let xml = x2js.json2xml_str(
+      cloneObject(this.modelService.getProjectData())
+    );
+
+    this.accessCpnService.getLog().then((data: any) => {
+      if (data) {
+        console.log(data);
+        console.log("data was returned");
+      }
+    });
+    
+    this.fileService.saveAsText(xml, filename, (filePath) => {
+      console.log("fileService.saveAsText", filePath);
     });
   }
 }
