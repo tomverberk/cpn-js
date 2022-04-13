@@ -198,7 +198,7 @@
       <tr>
         <td>CaseId</td>
         <td>
-          <input type="string" class="full-width"
+          <input type="text" class="full-width"
             [(ngModel)]="simulationService.simulationConfig.createLog.caseId">
         </td>
       </tr>
@@ -212,8 +212,24 @@
       <tr>
         <td>TimeUnit</td>
         <td>
-          <input type="string" class="full-width"
-            [(ngModel)]="simulationService.simulationConfig.createLog.timeUnit">
+          <select name="timeUnit" id="timeUnit" [(ngModel)]="simulationService.simulationConfig.createLog.timeUnit">
+            <option value="years">years</option>
+            <option value="months">months</option>
+            <option value="weeks">weeks</option>
+            <option value="days">days</option>
+            <option value="hours">hours</option>
+            <option value="minutes">minutes</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td>recordedEvents</td>
+        <td>
+          <select name="recordedEvents" id="recordedEvents" [(ngModel)]="simulationService.simulationConfig.createLog.recordedEvents">
+            <option value="start">start</option>
+            <option value="complete">complete</option>
+            <option value="start+complete">start+complete</option>
+          </select>
         </td>
       </tr>
       <tr>

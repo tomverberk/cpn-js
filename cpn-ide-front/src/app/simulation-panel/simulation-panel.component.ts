@@ -85,8 +85,6 @@ export class SimulationPanelComponent implements OnInit, OnDestroy {
       this.simulationService.simulationConfig
     );
     this.onSaveLog(false);
-    
-    console.log("ik kom hier");
   }
 
   onSaveLog(isSaveAs) {
@@ -130,7 +128,6 @@ export class SimulationPanelComponent implements OnInit, OnDestroy {
 
             //this.simulationService.setOutputPath(data.input[0].value);
             //this.simulationService.getOutputPath();
-            
             
             //this.simulationService.saveLogToFile(data.input[0].value);
             this.projectService.setModelName(data.input[0].value);

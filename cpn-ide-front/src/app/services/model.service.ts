@@ -27,6 +27,7 @@ import {
 import { parseDeclarartion } from "../project-tree/project-tree-declaration-node/declaration-parser";
 import { DEFAULT_PAGE } from "../common/default-data";
 import { element } from "protractor";
+import { ColorDeclarationsPipe } from "../pipes/color-declarations.pipe";
 
 /**
  * Common service for getting access to project data from all application
@@ -1681,6 +1682,7 @@ export class ModelService {
       }
     }
 
+
     return allArcs;
   }
 
@@ -2398,5 +2400,165 @@ export class ModelService {
       // elements[0]['style'].height = parentHeight + 'px';
       // console.log('testQQQ');
     }, 1000);
+  }
+
+  doPlaceCaseId(caseId){
+    this.placeCaseIdOnArcs(caseId);
+    this.makePlacesContainIntegerTokens();
+    this.updateStandardDeclarations(caseId);
+
+    this.eventService.send(Message.PROJECT_LOAD, {
+      project: this.project,
+    });
+  }
+
+  setInitialMarking(nameBeginPlace, amountOfTokens){
+    console.log(nameBeginPlace);
+    console.log(amountOfTokens);
+    const allPlaces = this.getAllPlaces();
+    let beginPlace = allPlaces.find(element => element.text === nameBeginPlace);
+    console.log(beginPlace);
+    if(beginPlace == undefined){
+      console.log("beginPlace is not defined")
+    } else {
+      beginPlace.initmark.text.__text = this.generateTokens(amountOfTokens);
+      console.log(beginPlace);
+    }
+
+    this.eventService.send(Message.PROJECT_LOAD, {
+      project: this.project,
+    });
+  }
+
+  //TODO let this work
+  generateTokens(amount){
+    return "1`1";
+  }
+
+  placeCaseIdOnArcs(caseId){
+    const allArcs = this.getAllArcs();
+    for(const arc of allArcs){
+      arc.annot.text = caseId;
+    }
+  }
+
+  makePlacesContainIntegerTokens(){
+    const allPlaces = this.getAllPlaces();
+    for(const place of allPlaces){
+      console.log(place.type.text);
+      place.type.text = "TIMEDINT";
+      console.log(place.type.text);
+    }
+  }
+
+  updateStandardDeclarations(caseId){
+    const standardDeclarationsBlock = this.getStandardDeclarationsBlock();
+    console.log(standardDeclarationsBlock);
+    this.addColorToStandardDeclarations(standardDeclarationsBlock, "TIMEDINT");
+    this.addVarToStandardDeclarations(standardDeclarationsBlock, caseId);
+  }
+
+  addColorToStandardDeclarations(standardDeclarationsBlock, string){
+    let hasColorInt = false;
+    let hasColorTimedInt = false;
+    nodeToArray(standardDeclarationsBlock.color).forEach((d) => {
+      console.log(d);
+      console.log(d.id);
+      console.log(d.id.toLowerCase());
+      console.log(d.id.toLowerCase() === "int");
+      
+      if(d.id.toLowerCase() === "int"){
+        hasColorInt = true;
+        console.log("Color INT has been found");
+      }
+      if(d.id.toLowerCase() === "timedint"){
+        hasColorTimedInt = true;
+        console.log("Color Timed INT has been found");
+      }
+    })
+
+    // arcsForCopy.push({
+    //   id: arc.id,
+    //   cpnPlaceId: arc.cpnPlace._id,
+    //   cpnTransitionId: arc.cpnTransition._id,
+    //   orient: arc.cpnElement._orientation,
+    //   label: arc.labels[0],
+    // });
+
+    let colorArray = nodeToArray(standardDeclarationsBlock.color);
+    if(!hasColorInt){
+      colorArray.push({
+        _id:"ID4",
+        id:"INT",
+        int: "",
+        layout: 'colset INT = int',
+      })
+    }
+    if(!hasColorTimedInt){
+      colorArray.push({
+        _id:"ID12345",
+        id: "TIMEDINT",
+        int: "",
+        layout: "colset TIMEDINT = int timed",
+        timed: "",
+      })
+    }
+    standardDeclarationsBlock.color = colorArray;
+  }
+
+  addVarToStandardDeclarations(standardDeclarationsBlock, caseId){
+    let hasCaseIdVar = false;
+    nodeToArray(standardDeclarationsBlock.var).forEach((v) => {
+      console.log(v);
+      console.log(v.id);
+      console.log(v.id === caseId);
+      if(v.id === caseId){
+        hasCaseIdVar = true;
+      }
+    })
+    if(!hasCaseIdVar){
+      let standardDeclarationsArray = nodeToArray(standardDeclarationsBlock.var)
+      console.log(standardDeclarationsBlock.color);
+      console.log(standardDeclarationsBlock.var);
+      standardDeclarationsArray.push({
+        _id:"ID123456",
+        id: caseId,
+        layout: "var " + caseId + ": TIMEDINT",
+        type: {id: 'TIMEDINT'},
+      })
+      standardDeclarationsBlock.var = standardDeclarationsArray;
+    }
+  }
+
+
+
+  getStandardDeclarationsBlock(){
+    let toReturn = undefined;
+    const cpn = this.getCpn();
+    if (!cpn) {
+      return [];
+    }
+
+    nodeToArray(cpn.globbox.block).forEach((b) => {
+      console.log(b);
+      console.log(b.id);
+      if(b.id === "Standard declarations"){
+        toReturn = b;
+        return;
+      }
+      nodeToArray(b.block).forEach((b2) => {
+        if(b2.id === "Standard declarations"){
+          toReturn = b2;
+          return;
+        }
+        nodeToArray(b2.block).forEach((b3) => {
+          if(b.id === "Standard declarations"){
+            toReturn = b3;
+            return;
+          }
+        });
+      });
+    });
+    return toReturn;
   }
 }

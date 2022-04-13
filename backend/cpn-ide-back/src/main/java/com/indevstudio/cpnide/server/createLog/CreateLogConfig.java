@@ -10,4 +10,5 @@ public class CreateLogConfig {
     String caseId;
     String startDateTime;
     String timeUnit;
+    String recordedEvents;
 }

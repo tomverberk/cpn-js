@@ -14,6 +14,8 @@ import java.util.*;
 
 import com.indevstudio.cpnide.server.model.PlaceMark;
 import com.indevstudio.cpnide.server.model.SimInfo;
+
+//import javafx.util.Pair;
 import javafx.util.Pair;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.cpntools.accesscpn.model.Object;
@@ -40,13 +42,18 @@ public class CreateLogContainer {
     private XAttributeMap traceMap;
     private Map<String, XTrace> traces;
     private Boolean isRecording = false;
+    private Boolean isRecordingTime = true;
     private String caseId = "x";
     private PetriNet net;
     private List<String> tauTransitions = new LinkedList<>();
     private String pathName;
+    private String pathNameWithoutcygDrive;
     private long startTimeLong;
     private String timeUnit;
     private Long timeUnitMultiplier;
+    private String recordedEvents;
+    private Boolean timeHasIncreased = false;
+    private Double lastEventTime;
     Queue<Event> bindingQueue = new LinkedList<>();
     Queue<Event> backupBindingQueue = new LinkedList<>();
 
@@ -117,36 +124,41 @@ public class CreateLogContainer {
         setCaseId(config.caseId);
         setStartTime(config.startDateTime);
         setTimeUnits(config.timeUnit);
+        setRecordedEvents(config.getRecordedEvents());
+    }
+
+    public void setRecordedEvents(String recordedEvents){
+        this.recordedEvents = recordedEvents;
     }
 
     public void setTimeUnits(String timeUnit) throws Exception {
         String timeUnitLowerCase = timeUnit.toLowerCase();
         switch(timeUnitLowerCase){
-            case "years": case "year": case "y":
+            case "years":
                 this.timeUnit = "year";
                 this.timeUnitMultiplier = (long) 1000 * 60 * 60 * 24 * 365;
                 break;
-            case "months": case "month":
+            case "months":
                 this.timeUnit = "month";
                 this.timeUnitMultiplier = (long) 1000 * 60 * 60 * 24 * 30;
                 break;
-            case "weeks": case "week": case "w":
+            case "weeks":
                 this.timeUnit = "week";
                 this.timeUnitMultiplier = (long) 1000 * 60 * 60 * 24 * 7;
                 break;
-            case "days": case "day": case "d":
+            case "days":
                 this.timeUnit = "days";
                 this.timeUnitMultiplier = (long) 1000 * 60 * 60 * 24;
                 break;
-            case "hours": case "hour": case "h":
+            case "hours":
                 this.timeUnit = "week";
                 this.timeUnitMultiplier = (long) 1000 * 60 * 60;
                 break;
-            case "minutes": case "minute":
+            case "minutes":
                 this.timeUnit = "minute";
                 this.timeUnitMultiplier = (long) 1000 * 60;
                 break;
-            case "seconds": case "second": case "s":
+            case "seconds":
                 this.timeUnit = "second";
                 this.timeUnitMultiplier = (long) 1000;
                 break;
@@ -159,16 +171,28 @@ public class CreateLogContainer {
     /**
      *
      */
-    public void CreateLog(CreateLogConfig config) throws Exception {
+    public void CreateLog(CreateLogConfig config, Double timeLastUpdatedEvent) throws Exception {
+
         setConfig(config);
         XAttributeMap logMap = factory.createAttributeMap();
         log = factory.createLog(logMap);
         traceMap = factory.createAttributeMap();
         traces = new HashMap<String, XTrace>();
+
+        setTimeHasIncreased(timeLastUpdatedEvent);
+
+        System.out.println("timeLastUpdatedEvent");
+        System.out.println(timeLastUpdatedEvent);
+        System.out.println("timeHasIncreased");
+        System.out.println(timeHasIncreased);
+
+
         Event event;
         while(!bindingQueue.isEmpty()){
             event = bindingQueue.poll();
-            createActivityFromFiredBinding(event);
+            if((event.isCompleteEvent() && recordCompleteEvent()) || (event.isStartEvent() && recordStartEvent())){
+                createActivityFromFiredBinding(event);
+            }
             backupBindingQueue.add(event);
         }
 
@@ -178,17 +202,35 @@ public class CreateLogContainer {
         }
 
         //TODO REREPLACE THIS WITH FILENAME
-        File file = new File("test.xes");
+        File directory = new File(pathName.replace("/mynet.xes", ""));
+        directory.mkdirs();
+
+        File file = new File(pathName);
+
+        //File file2 = new File(pathNameWithoutcygDrive);
+        System.out.println(pathName);
+        // value = \Users\tomve\CPN_IDE\model_out\CPN_IDE_SESSION_1649252354753\mynet.xes
+
+        // value = \Users\tomve\CPN_IDE\model_out\CPN_IDE_SESSION_1649252354753\mynet.xes
+
         try
         {
             export(file);
         } catch(Exception e) {
-            System.out.println("Something went wrong in writing a file");
+            System.out.println(e);
         }
 
         bindingQueue = backupBindingQueue;
         backupBindingQueue = new LinkedList<>();
 
+    }
+
+    public void setTimeHasIncreased(Double timeLastUpdatedEvent){
+        if(timeLastUpdatedEvent == 0.0){
+            this.timeHasIncreased = false;
+        } else {
+            this.timeHasIncreased = true;
+        }
     }
 
     public void setStartTime(String startDateTime) throws ParseException {
@@ -239,12 +281,14 @@ public class CreateLogContainer {
         }
 
         // Add time to the event
-        long eventTimeTransformed = (long) (eventTime * timeUnitMultiplier + startTimeLong);
-        XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", eventTimeTransformed, null);
-        event1AttributeMap.put("time", xAttributeTimestamp);
+        if(timeHasIncreased) {
+            long eventTimeTransformed = (long) (eventTime * timeUnitMultiplier + startTimeLong);
+            XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", eventTimeTransformed, null);
+            event1AttributeMap.put("time", xAttributeTimestamp);
+        }
 
         // Add lifeCycle transition
-        if(event.isCreateEvent()){
+        if(event.isStartEvent()){
             XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("lifecycle:transition", event.getLifeCycleTransition(), null);
             event1AttributeMap.put("lifecycle:transition", xAttributeLiteral);
         } else if(event.isCompleteEvent()){
@@ -294,6 +338,7 @@ public class CreateLogContainer {
 
         return info;
     }
+
 
     public Boolean isLifeCycleTransition(String transitionSubString){
         switch(transitionSubString){
@@ -409,17 +454,22 @@ public class CreateLogContainer {
         }
     }
 
+    public Boolean isRecordingTime(){
+        return this.isRecordingTime;
+    }
+
     public void recordActivity(Binding b, SimInfo info, Double endTimeActivity){
         if(!isRecording) {
             return;
         }
         System.out.println(info.getTime());
         Double simulatorTime = makeTimeDouble(info.getTime());
-        bindingQueue.add(new Event(b, simulatorTime, "created"));
-        if(endTimeActivity!= null){
-            bindingQueue.add(new Event(b, endTimeActivity, "completed"));
+
+        bindingQueue.add(new Event(b, simulatorTime, "start"));
+        if (endTimeActivity != null) {
+            bindingQueue.add(new Event(b, endTimeActivity, "complete"));
         } else {
-            bindingQueue.add(new Event(b, simulatorTime, "completed"));
+            bindingQueue.add(new Event(b, simulatorTime, "complete"));
         }
 
     }
@@ -441,8 +491,14 @@ public class CreateLogContainer {
     }
 
     public void setOutputPath(String path, String outputDir){
+        outputDir = outputDir.replace("/cygdrive/C", "");
+        outputDir = outputDir.replace("model_out", "log_out");
         this.pathName = outputDir + "/" + path;
-        this.pathName = path;
+        //setOutputPath(this.pathName);
+    }
+
+    public void setOutputPath(String correctPath){
+        this.pathNameWithoutcygDrive = correctPath.replace("/cygdrive/C", "");
     }
 
     public String getOutputPath(){
@@ -454,8 +510,13 @@ public class CreateLogContainer {
         return this.log;
     }
 
-    public void setRecording(Boolean bool){
+    public void setRecordActivities(Boolean bool){
         this.isRecording = bool;
+        this.isRecordingTime = false;
+    }
+
+    public void setRecordTime(Boolean bool) {
+        this.isRecordingTime = bool;
     }
 
     public Boolean isLogEmpty(){
@@ -464,6 +525,14 @@ public class CreateLogContainer {
         } else {
             return false;
         }
+    }
+
+    public Boolean recordStartEvent(){
+        return this.recordedEvents.contains("start");
+    }
+
+    public Boolean recordCompleteEvent(){
+        return this.recordedEvents.contains("complete");
     }
 
     public void setCaseId(String caseId){

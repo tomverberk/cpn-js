@@ -238,7 +238,7 @@ public class SimulatorController {
         });
     }
 
-    @GetMapping(value = "/sim/record/{bool}")
+    @GetMapping(value = "/sim/recordactivities/{bool}")
     @ApiOperation(nickname = "Change recording", value = "Change recording")
     @ApiResponses(
             value = {
@@ -246,9 +246,25 @@ public class SimulatorController {
                     @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
-    public ResponseEntity changeRecording(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("bool") Boolean bool) {
+    public ResponseEntity setRecordActivities(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("bool") Boolean bool) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            _netContainer.setRecording(bool);
+            _netContainer.setRecordActivities(bool);
+            NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
+            return ResponseEntity.status(HttpStatus.OK).body(netInf);
+        });
+    }
+
+    @GetMapping(value = "/sim/recordtime/{bool}")
+    @ApiOperation(nickname = "Change recording", value = "Change recording")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "change success"),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity setRecordTime(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("bool") Boolean bool) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            _netContainer.setRecordTime(bool);
             NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             return ResponseEntity.status(HttpStatus.OK).body(netInf);
         });

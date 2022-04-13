@@ -8,6 +8,7 @@ import { FileService } from "./file.service";
 import * as X2JS from "../../lib/x2js/xml2json.js";
 import { cloneObject } from "src/app/common/utils";
 import { time } from "console";
+import { updatePartiallyEmittedExpression } from "typescript/lib/tsserverlibrary";
 
 @Injectable({
   providedIn: "root",
@@ -26,6 +27,8 @@ export class SimulationService {
   firedTransitionBindId;
   firedId;
   outputPath;
+
+  simulatorTime;
 
   multiStepCount = 0;
   multiStepLastTimeMs = 0;
@@ -50,7 +53,8 @@ export class SimulationService {
     createLog:{
       caseId: "x",
       startDateTime: "1970-01-01T00:00",
-      timeUnit: "day",
+      timeUnit: "days",
+      recordedEvents:"complete",
     }
   };
 
@@ -88,6 +92,14 @@ export class SimulationService {
     this.eventService.on(Message.SHAPE_RUN_SCRIPT, (message) =>
       this.runscript(message.script)
     );
+  }
+
+  public updateTime(){
+    //TODO Apparantly this gives back undefined????
+    const simState = this.accessCpnService.getSimState();
+    const simState2 = this.accessCpnService.getStateData();
+    console.log(simState);
+    console.log(simState2);
   }
 
   public setMode(mode) {
@@ -229,6 +241,7 @@ export class SimulationService {
   }
 
   animateModelEditor() {
+    this.updateTime;
     setTimeout(() => {
       const modelEditor = this.editorPanelService.getSelectedModelEditor();
       console.log(
@@ -250,6 +263,7 @@ export class SimulationService {
   }
 
   onSimulationSelectBinding(event) {
+    this.updateTime();
     if (!this.accessCpnService.isSimulation) {
       return;
     }
@@ -279,6 +293,7 @@ export class SimulationService {
   }
 
   onSimulationAnimateComplete() {
+    this.updateTime();
     this.updateModelEditors();
 
     switch (this.mode) {
@@ -289,6 +304,7 @@ export class SimulationService {
   }
 
   onSimulationStepDone() {
+    this.updateTime();
     return new Promise((resolve, reject) => {
       const firedData = this.accessCpnService.getFiredData();
 
@@ -427,6 +443,7 @@ export class SimulationService {
       caseId: config.caseId,
       startDateTime: config.startDateTime,
       timeUnit: config.timeUnit,
+      recordedEvents: config.recordedEvents,
     };
 
     this.accessCpnService.setOutputPathLog(path).then(() => {

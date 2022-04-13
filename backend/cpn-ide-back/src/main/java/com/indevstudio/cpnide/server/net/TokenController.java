@@ -18,6 +18,7 @@ public class TokenController {
     private List<PlaceMark> lastMarking = null;
     private Map<String, List<TimedToken>> placeMapping = new HashMap<>();
     private List<String> idOfPlacesChangedOnLastStep = new ArrayList<>();
+    private Double lastTime= 0.0;
 
     private TokenController(){
 
@@ -47,6 +48,7 @@ public class TokenController {
         }
         SetDifference(newMarking);
         this.lastMarking = newMarking;
+        setSmallestTimeTokenLastChanged();
     }
 
     public void SetMarking(List<PlaceMark> marking) throws Exception{
@@ -74,7 +76,7 @@ public class TokenController {
         }
     }
 
-    public Double getSmallestTimeTokenLastChanged(){
+    public void setSmallestTimeTokenLastChanged(){
         Double lowestTime = Double.MAX_VALUE;
         for(String id: idOfPlacesChangedOnLastStep){
             List<TimedToken> timedTokens = placeMapping.get(id);
@@ -85,10 +87,14 @@ public class TokenController {
             }
         }
         if(lowestTime == Double.MAX_VALUE){
-            return null;
+            lastTime = 0.0;
         } else {
-            return lowestTime;
+            lastTime = lowestTime;
         }
+    }
+
+    public Double getLastTime(){
+        return this.lastTime;
     }
 
     public void SetPlaceInfo(PlaceMark placeMarkNew, String markingOld) throws Exception{

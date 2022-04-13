@@ -321,7 +321,6 @@ public class PetriNetContainer {
 
     void CleanOutputPathContent(String sessionId) throws Exception {
         String pathStr = getOutputFullPathStr(sessionId);
-
         FileUtils.deleteDirectory(new File(pathStr));
     }
 
@@ -663,12 +662,18 @@ public class PetriNetContainer {
         } else {
             b = s.executeAndGet(getTargetTransition(s, transId));
         }
-        List<PlaceMark> marking = returnTokensAndMarking(sessionId);
 
-        tokenController.updateMarking(returnTokensAndMarking(sessionId));
-        Double timeLastChanged = tokenController.getSmallestTimeTokenLastChanged();
-        createLogContainer.recordActivity(b, getState(sessionId), timeLastChanged);
+        updateCreateLog(sessionId, b);
+
         return b.getTransitionInstance().getNode().getId();
+    }
+
+    public void updateCreateLog(String sessionId, Binding b) throws Exception{
+        if(createLogContainer.isRecordingTime()) {
+            tokenController.updateMarking(returnTokensAndMarking(sessionId));
+        }
+        Double timeLastChanged = tokenController.getLastTime();
+        createLogContainer.recordActivity(b, getState(sessionId), timeLastChanged);
     }
 
     public SimInfo getState(String sessionId) throws Exception {
@@ -699,9 +704,8 @@ public class PetriNetContainer {
         s.execute(binds.get(bindingId));
         SimInfo simInfo = getState(sessionId);
         List<PlaceMark> marking = getTokensAndMarking(sessionId);
-        tokenController.updateMarking(returnTokensAndMarking(sessionId));
-        Double timeLastChanged = tokenController.getSmallestTimeTokenLastChanged();
-        createLogContainer.recordActivity(binds.get(bindingId), getState(sessionId), timeLastChanged);
+
+        updateCreateLog(sessionId, binds.get(bindingId));
     }
 
     public ReplicationResp makeReplication(String sessionId, Replication stepParam) throws Exception {
@@ -716,8 +720,10 @@ public class PetriNetContainer {
 
     public ReplicationResp makeCreateLog(String sessionId, CreateLogConfig config) throws Exception {
         HighLevelSimulator sim = usersSimulator.get(sessionId);
+        File fileObj = new File(sim.getOutputDir());
+        fileObj.mkdirs();
         log.debug("Writing log to " + sim.getOutputDir());
-        createLogContainer.CreateLog(config);
+        createLogContainer.CreateLog(config, tokenController.getLastTime());
         log.debug("Written log to " + sim.getOutputDir());
         return getOutputPathContent(sessionId);
     }
@@ -758,9 +764,8 @@ public class PetriNetContainer {
 
             Binding b = sim.executeAndGet();
             List<PlaceMark> marking = getTokensAndMarking(sessionId);
-            tokenController.updateMarking(returnTokensAndMarking(sessionId));
-            Double timeLastChanged = tokenController.getSmallestTimeTokenLastChanged();
-            createLogContainer.recordActivity(b, getState(sessionId), timeLastChanged);
+
+            updateCreateLog(sessionId, b);
             i++;
         }
         //_sim.execute(stepParam.getAmount());
@@ -768,8 +773,13 @@ public class PetriNetContainer {
         return getOutputPathContent(sessionId).getExtraInfo();
     }
 
-    public void setRecording(Boolean bool){
-        createLogContainer.setRecording(bool);
+    public void setRecordActivities(Boolean bool){
+        createLogContainer.setRecordActivities(bool);
+    }
+
+    public void setRecordTime(Boolean bool) {
+        System.out.println("recordTime is set to " + bool);
+        createLogContainer.setRecordTime(bool);
     }
 
     public void clearLog(){

@@ -14,6 +14,7 @@ import { ElectronService } from "ngx-electron";
 export class AccessCpnService {
   public isSimulation = false;
   public isRecordActivities = false;
+  public isRecordTime = true;
 
   public errorData = [];
   public errorIds = [];
@@ -510,6 +511,8 @@ export class AccessCpnService {
       "AccessCpnService, initSim(), fair_options_arr = ",
       fair_options_arr
     );
+
+    
 
     const fair_options = {};
     fair_options_arr.forEach((o) => (fair_options[o._name] = o.value.boolean));
@@ -1260,6 +1263,8 @@ export class AccessCpnService {
   }
 
   setRecordActivities(bool){
+    //Reset isRecordTime
+    this.isRecordTime = false;
     this.isRecordActivities = bool
     return new Promise<void>((resolve, reject) => {
       if (!this.simInitialized || !this.sessionId) {
@@ -1270,7 +1275,7 @@ export class AccessCpnService {
       console.log("AccessCpnService, setRecordActivities(), " + bool);
 
       const url =
-        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/record/" + bool; // ID1412328496
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/recordactivities/" + bool; // ID1412328496
       this.http
         .get(url, { headers: { "X-SessionId": this.sessionId } })
         .subscribe(
@@ -1279,6 +1284,34 @@ export class AccessCpnService {
           },
           (error) => {
             console.error("AccessCpnService, setRecordActivities(), ERROR, data = ", error);
+
+            this.eventService.send(Message.SERVER_ERROR, { data: error });
+            reject(error);
+          }
+        );
+    });
+  }
+
+  setRecordTime(bool){
+    this.isRecordTime = bool
+    return new Promise<void>((resolve, reject) => {
+      if (!this.simInitialized || !this.sessionId) {
+        resolve();
+        return;
+      }
+
+      console.log("AccessCpnService, setRecordTime(), " + bool);
+
+      const url =
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/recordtime/" + bool; // ID1412328496
+      this.http
+        .get(url, { headers: { "X-SessionId": this.sessionId } })
+        .subscribe(
+          (data: any) => {
+            resolve();
+          },
+          (error) => {
+            console.error("AccessCpnService, setRecordTime()), ERROR, data = ", error);
 
             this.eventService.send(Message.SERVER_ERROR, { data: error });
             reject(error);

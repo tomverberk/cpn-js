@@ -20,12 +20,12 @@ public class Event {
         return this.time;
     }
 
-    public Boolean isCreateEvent(){
-        return lifeCycleTransition.equals("created");
+    public Boolean isStartEvent(){
+        return lifeCycleTransition.equals("start");
     }
 
     public Boolean isCompleteEvent(){
-        return lifeCycleTransition.equals("completed");
+        return lifeCycleTransition.equals("complete");
     }
 
     public String getLifeCycleTransition(){

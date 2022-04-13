@@ -37,7 +37,7 @@ export class MainToolbarComponent implements OnInit {
     public applicationService: ApplicationService,
     private electronService: ElectronService,
     private ipcService: IpcService,
-    public dialog: MatDialog
+    public saveDialog: MatDialog
   ) { }
 
   ngOnInit() {
@@ -272,7 +272,7 @@ export class MainToolbarComponent implements OnInit {
       if (this.electronService.isElectronApp) {
         this.projectService.saveProjectToFile(this.modelService.projectName);
       } else {
-        const dialogRef = this.dialog.open(DialogComponent, {
+        const dialogRef = this.saveDialog.open(DialogComponent, {
           width: "500px",
           data: {
             title: "Save the changes to file",
@@ -307,7 +307,7 @@ export class MainToolbarComponent implements OnInit {
       }
 
       // else open save dialog
-      const dialogRef = this.dialog.open(DialogComponent, {
+      const dialogRef = this.saveDialog.open(DialogComponent, {
         width: "500px",
         data: {
           title: "Save the changes to file before closing?",
@@ -385,8 +385,73 @@ export class MainToolbarComponent implements OnInit {
     this.accessCpnService.setRecordActivities(false);
   }
 
+  onRecordTime(){
+    this.accessCpnService.isRecordTime = this.accessCpnService.isRecordTime
+      ? false
+      : true;
+      this.accessCpnService.setRecordTime(this.accessCpnService.isRecordTime);
+  }
+
   onClearLog(){
     this.accessCpnService.doClearLog();
+  }
+
+  onPlaceCaseId(){
+    if (this.electronService.isElectronApp) {
+      //TODO
+    } else {
+      const dialogRef = this.saveDialog.open(DialogComponent, {
+        width: "500px",
+        data: {
+          title: "set caseId",
+          input: [
+            { title: "caseId", value: "x" },
+          ],
+        },
+      });
+      dialogRef.afterClosed().subscribe((data) => {
+        if (data && data.result === DialogComponent.YES) {
+          console.log(
+            this.constructor.name,
+            "onPlaceCaseId(), YES clicked, data = ",
+            data
+          );
+
+          // Save to file
+          this.modelService.doPlaceCaseId(data.input[0].value);
+        }
+      });
+    }
+  }
+
+  onSetInitialMarking(){
+    if (this.electronService.isElectronApp) {
+      //TODO
+    } else {
+      const dialogRef = this.saveDialog.open(DialogComponent, {
+        width: "500px",
+        data: {
+          title: "Initial marking settings",
+          input: [
+            { title: "Source", value: "source" },
+            { title: "Amount of tokens", value: 10},
+          ],
+        },
+      });
+      dialogRef.afterClosed().subscribe((data) => {
+        if (data && data.result === DialogComponent.YES) {
+          console.log(
+            this.constructor.name,
+            "onSetInitialMarking(), YES clicked, data = ",
+            data
+          );
+
+          // Save to file
+          this.modelService.setInitialMarking(data.input[0].value, data.input[1].value);
+        }
+      });
+    }
+    
   }
 
   onCreateLog() {
