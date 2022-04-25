@@ -98,12 +98,15 @@ public class SimulatorController {
     @ApiOperation(nickname = "Get outputPath", value = "Get outputPath")
     @ApiResponses(
             value = {
-                    @ApiResponse(code = 200, message = "success", response = String.class),
+                    @ApiResponse(code = 200, message = "success", response = String[].class),
                     @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
     public ResponseEntity getOutputPath(@RequestHeader(value = "X-SessionId") String sessionId) {
-        return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(_netContainer.getOutputPath()));
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            String[] outputPath = {_netContainer.getOutputPath()};
+            return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(outputPath));
+        });
     }
 
     @GetMapping(value = "/sim/step/{transId}")
@@ -205,6 +208,22 @@ public class SimulatorController {
                 System.out.println(e);
                 return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e));
             }
+        });
+    }
+
+    @GetMapping(value = "/sim/exist_recorded_events")
+    @ApiOperation(nickname = "is log empty", value = "is log empty")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(code = 200, message = "Request success", response = Boolean.class),
+                    @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
+                    @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
+            })
+    public ResponseEntity existRecordedEvents(@RequestHeader(value = "X-SessionId") String sessionId) {
+        return RequestBaseLogic.HandleRequest(sessionId, () -> {
+            Boolean bool = _netContainer.existRecordedEvents(sessionId);
+            System.out.println(bool.getClass());
+            return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(bool));
         });
     }
 

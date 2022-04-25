@@ -86,9 +86,7 @@ public class TokenController {
                 }
             }
         }
-        if(lowestTime == Double.MAX_VALUE){
-            lastTime = 0.0;
-        } else {
+        if(lowestTime != Double.MAX_VALUE){
             lastTime = lowestTime;
         }
     }

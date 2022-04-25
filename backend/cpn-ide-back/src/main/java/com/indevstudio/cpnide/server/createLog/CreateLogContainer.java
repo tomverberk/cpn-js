@@ -47,7 +47,7 @@ public class CreateLogContainer {
     private PetriNet net;
     private List<String> tauTransitions = new LinkedList<>();
     private String pathName;
-    private String pathNameWithoutcygDrive;
+    private String folderName;
     private long startTimeLong;
     private String timeUnit;
     private Long timeUnitMultiplier;
@@ -202,7 +202,7 @@ public class CreateLogContainer {
         }
 
         //TODO REREPLACE THIS WITH FILENAME
-        File directory = new File(pathName.replace("/mynet.xes", ""));
+        File directory = new File(folderName);
         directory.mkdirs();
 
         File file = new File(pathName);
@@ -245,7 +245,16 @@ public class CreateLogContainer {
         System.out.println("getAllAssignments =" + binding.getAllAssignments());
         System.out.println("transition name = " + binding.getTransitionInstance().getNode().getName().asString());
         System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime());
-        System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime().asString().replace("@", "").replace(" ", "").replace("+", ""));
+        //TODO THIS LINE THROWS AN ERROR WHEN THERE IS NO TIME
+        //System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime().asString().replace("@", "").replace(" ", "").replace("+", ""));
+        List<Arc> allTargetArcs = binding.getTransitionInstance().getNode().getTargetArc();
+        for(Arc arc: allTargetArcs){
+            System.out.println("an targetarc = " + arc);
+            String arcInscription = arc.getHlinscription().getText();
+            System.out.println(arcInscription);
+        }
+        System.out.println("targetNodes hopefully = " + allTargetArcs);
+
     }
 
     public void printTrace(XTrace trace){
@@ -270,11 +279,16 @@ public class CreateLogContainer {
         return addedTime;
     }
 
+    public List<String> getAllTargetArcs(Binding b){
+        return null;
+    }
+
     public XEvent createEventFromBinding(Event event, XTrace trace){
         XAttributeMap event1AttributeMap = factory.createAttributeMap();
         Binding binding = event.getBinding();
         Double eventTime = event.getTime();
         printBinding(binding);
+        List<String> allTargetArcs = getAllTargetArcs(binding);
         //Integer addedTimeByBinding = getTimeFromBinding(binding);
         if (trace != null) {
             printTrace(trace);
@@ -313,8 +327,7 @@ public class CreateLogContainer {
         return xEvent;
     }
 
-    public Queue<Pair<String, String>> getTransitionInfoFromBinding(Binding b){
-        String transitionString = b.getTransitionInstance().getNode().getName().asString();
+    public Queue<Pair<String, String>> getTransitionInfoFromTransitionLabel(String transitionString){
         Queue<Pair<String, String>> info = new LinkedList<Pair<String, String>>();
         String transitionSubString = transitionString;
         Integer indexOfLastPlus = 0;
@@ -338,6 +351,43 @@ public class CreateLogContainer {
 
         return info;
     }
+
+    public Queue<Pair<String, String>> getTransitionInfoFromBinding(Binding b){
+        String transitionString = b.getTransitionInstance().getNode().getName().asString();
+        Queue<Pair<String, String>> transitionInfo = getTransitionInfoFromTransitionLabel(transitionString);
+        List<Arc> targetArcs = b.getTransitionInstance().getNode().getTargetArc();
+        for(Arc arc: targetArcs){
+            Pair<String, String> arcInfo = getTransitionInfoFromTargetArc(arc);
+            if(arcInfo != null){
+                transitionInfo.add(arcInfo);
+            }
+        }
+
+        return transitionInfo;
+    }
+
+    public Pair<String, String> getTransitionInfoFromTargetArc(Arc arc){
+        if(arc.getHlinscription().getText().equals(caseId)){
+            return null;
+        }
+        // Arc comes from a resource
+        Node place = arc.getSource();
+        String placeString = place.getName().asString();
+        if(placeString.contains("r")){
+            String resourceNr = placeString.replace("r", "");
+            try{
+                Integer.parseInt(resourceNr);
+                return new Pair("org:resource", resourceNr);
+            } catch (Exception e) {
+                return null;
+            }
+
+        }
+
+        return null;
+
+
+    };
 
 
     public Boolean isLifeCycleTransition(String transitionSubString){
@@ -424,6 +474,7 @@ public class CreateLogContainer {
 
     public void createActivityFromFiredBinding(Event event) throws Exception{
         Binding b = event.getBinding();
+
         String id = null;
         if(isTauTransition(b)){
             return;
@@ -493,13 +544,14 @@ public class CreateLogContainer {
     public void setOutputPath(String path, String outputDir){
         outputDir = outputDir.replace("/cygdrive/C", "");
         outputDir = outputDir.replace("model_out", "log_out");
+        this.folderName = outputDir;
         this.pathName = outputDir + "/" + path;
         //setOutputPath(this.pathName);
     }
 
-    public void setOutputPath(String correctPath){
-        this.pathNameWithoutcygDrive = correctPath.replace("/cygdrive/C", "");
-    }
+//    public void setOutputPath(String correctPath){
+//        this.pathNameWithoutcygDrive = correctPath.replace("/cygdrive/C", "");
+//    }
 
     public String getOutputPath(){
         return this.pathName;
@@ -519,12 +571,17 @@ public class CreateLogContainer {
         this.isRecordingTime = bool;
     }
 
-    public Boolean isLogEmpty(){
+    public Boolean hasRecordedEvents(){
         if (bindingQueue.size() == 0){
-            return true;
-        } else {
             return false;
+        } else {
+            return true;
         }
+    }
+
+    public Boolean isLogEmpty(){
+        System.out.println(log.isEmpty());
+        return(log.isEmpty());
     }
 
     public Boolean recordStartEvent(){

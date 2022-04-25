@@ -697,6 +697,8 @@ public class PetriNetContainer {
         return createLogContainer.isLogEmpty();
     }
 
+    public Boolean existRecordedEvents(String sessionId) { return createLogContainer.hasRecordedEvents(); }
+
     public void makeStepWithBinding(String sessionId, String bindingId, String transId) throws Exception {
         // String type = requestBody.get(0).get("type").toString();
         HighLevelSimulator s = usersSimulator.get(sessionId);

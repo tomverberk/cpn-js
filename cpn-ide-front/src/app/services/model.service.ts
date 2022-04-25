@@ -2,6 +2,7 @@ import { Injectable } from "@angular/core";
 import { EventService } from "./event.service";
 import { Message } from "../common/message";
 import { SettingsService } from "../services/settings.service";
+import Diagram from "diagram-js";
 
 import { getDefText } from "../../lib/cpn-js/features/modeling/CpnElementFactory";
 
@@ -28,12 +29,14 @@ import { parseDeclarartion } from "../project-tree/project-tree-declaration-node
 import { DEFAULT_PAGE } from "../common/default-data";
 import { element } from "protractor";
 import { ColorDeclarationsPipe } from "../pipes/color-declarations.pipe";
-
+import { ModelEditorComponent } from "../model-editor/model-editor.component";
+import { ModelEditorToolbarComponent } from "../model-editor/model-editor-toolbar/model-editor-toolbar.component";
 /**
  * Common service for getting access to project data from all application
  */
 @Injectable()
 export class ModelService {
+  diagram: Diagram;
   monitorType = MonitorType;
 
   private isLoaded = false;
@@ -53,7 +56,9 @@ export class ModelService {
 
   constructor(
     private eventService: EventService,
-    private settings: SettingsService
+    private settings: SettingsService,
+    //private modelEditorComponent: ModelEditorComponent,
+    //private modelEditor: ModelEditorToolbarComponent,
   ) {
     console.log("ModelService instance CREATED!");
 
@@ -2423,16 +2428,34 @@ export class ModelService {
     } else {
       beginPlace.initmark.text.__text = this.generateTokens(amountOfTokens);
       console.log(beginPlace);
+      let location = beginPlace;
     }
 
     this.eventService.send(Message.PROJECT_LOAD, {
       project: this.project,
     });
+  
+
+    // let element = this._cpnFactory.createShape(
+    //   undefined,
+    //   transCpnElement,
+    //   CPN_TRANSITION,
+    //   position,
+    //   true
+    // );
   }
+
+ 
 
   //TODO let this work
   generateTokens(amount){
-    return "1`1";
+    let markingString = "";
+    for(let i = 1; i <= amount; i++){
+      markingString = markingString + "1`" + i + "++";
+    }
+    console.log(markingString);
+    markingString = markingString.substring(0, markingString.length-2)
+    return markingString;
   }
 
   placeCaseIdOnArcs(caseId){

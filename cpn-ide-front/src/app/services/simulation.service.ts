@@ -446,28 +446,36 @@ export class SimulationService {
       recordedEvents: config.recordedEvents,
     };
 
-    this.accessCpnService.setOutputPathLog(path).then(() => {
-      //this.outputPath = this.accessCpnService.getOutputPathLog()}).then(() => {
-      this.accessCpnService.doCreateLog(options)}).then(()=> {
+    this.accessCpnService.setOutputPathLog(path)
+      .then(() => this.accessCpnService.getOutputPathLog())
+      .then((result) => {
+        this.outputPath = result[0];
+        this.accessCpnService.doCreateLog(options)
+      .then(() => this.accessCpnService.existRecordedEvents())
+      .then((result2) => this.accessCpnService.getIsLogEmpty(result2))
+      .then(() => {
         const modelEditorList =
-          this.editorPanelService.getModelEditorList() || [];
-        for (const modelEditor of modelEditorList) {
-          modelEditor.updateElementStatus(false);
-        }
-      })
+            this.editorPanelService.getModelEditorList() || [];
+          for (const modelEditor of modelEditorList) {
+            modelEditor.updateElementStatus(false);
+          }
+          console.log("this.outputPath");
+          console.log(this.outputPath);
+          this.eventService.send(Message.LOG_SAVED, {path: this.outputPath}); 
+      });
+    })
+
+    
     
     
 
-    this.accessCpnService.getIsLogEmpty().then(() => {
-      const modelEditorList =
-        this.editorPanelService.getModelEditorList() || [];
-      for (const modelEditor of modelEditorList) {
-        modelEditor.updateElementStatus(false);
-      }
-    });
-
-    console.log(this.outputPath);
-    this.eventService.send(Message.LOG_SAVED, {path: this.outputPath});
+    // this.accessCpnService.getIsLogEmpty().then(() => {
+    //   const modelEditorList =
+    //     this.editorPanelService.getModelEditorList() || [];
+    //   for (const modelEditor of modelEditorList) {
+    //     modelEditor.updateElementStatus(false);
+    //   }
+    // });
   }
 
   setOutputPath(path){

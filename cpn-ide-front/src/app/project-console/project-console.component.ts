@@ -157,12 +157,15 @@ export class ProjectConsoleComponent implements OnInit {
     });
 
     this.eventService.on(Message.LOG_EMPTY_LOG, () => {
-      
-      this.logError("Created log is empty");
+      this.logError("The log created by using the current settings and model and recorded activities is empty");
+    })
+
+    this.eventService.on(Message.LOG_NO_RECORDED_EVENTS, () => {
+      this.logError("There are currently no recorded events");
     })
 
     this.eventService.on(Message.LOG_UNKWOWN_CASE_ID, (error) => {
-      console.log("there is an error here")
+      console.log("there is an error here");
       console.log(error.data.error.message);
       console.log(error.data);
       
@@ -171,7 +174,7 @@ export class ProjectConsoleComponent implements OnInit {
     })
 
     this.eventService.on(Message.LOG_SAVED, (data) => {
-      this.logSuccess("Path saved at: " + data.path)
+      this.logSuccess("Log saved at: " + data.path)
     });
 
 
@@ -222,6 +225,10 @@ export class ProjectConsoleComponent implements OnInit {
 
   logSuccess(text) {
     this.logColor(text, "success");
+  }
+
+  logWarning(text, id?){
+    this.logColor(text, "warning", id);
   }
 
   logChanges(text) {

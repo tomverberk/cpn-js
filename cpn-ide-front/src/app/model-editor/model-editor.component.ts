@@ -43,6 +43,7 @@ import { TEST_TOKEN_DATA } from "../test/test-data";
 import { EditorPanelService } from "../services/editor-panel.service";
 import { IpcService } from "../services/ipc.service";
 import { Subscription } from "rxjs";
+import { createShorthandPropertyAssignment } from "typescript/lib/tsserverlibrary";
 
 @Component({
   selector: "app-model-editor",
@@ -1142,6 +1143,7 @@ export class ModelEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     });
     return list;
   }
+
   // @HostListener('document:keydown.control.z', ['$event']) onKeydownCtrXHandler(event: KeyboardEvent) {
   //   console.log('undo perform');
   //   // this.getUndo();
@@ -1153,4 +1155,66 @@ export class ModelEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   //   // this.getRedo();
   //   event.preventDefault();
   // }
+
+  onCreateGenerator(){
+    console.log("OnCreateGenerator")
+    let nameBeginPlace = "AVert";
+    let amountOfTokens = 10;
+    this.createPlacesForTokenGenerator(amountOfTokens, nameBeginPlace);
+    this.createVarForTokenGenerator();
+    this.createTransitionsForTokenGenerator();
+    this.createArcsForTokenGenerator(nameBeginPlace);
+  }
+
+  createPlacesForTokenGenerator(amountOfTokens, nameBeginPlace){
+    const allPlaces = this.modelService.getAllPlaces();
+    let beginPlace = allPlaces.find(element => element.text === nameBeginPlace);
+    console.log("Model Editor createShape")
+
+    const position = {x: beginPlace.posattr._x, y: beginPlace.posattr._y};
+
+    console.log(beginPlace);
+    console.log(beginPlace.posattr);
+    console.log(position);
+    this.createShape(CPN_PLACE, position);
+    this.createShape(CPN_TRANSITION, position);
+  }
+
+  createShape(type, position){
+    let element = this.cpnFactory.createShape(
+      undefined,
+      undefined,
+      type,
+      position,
+      true);
+
+    console.log(element.cpnElement);
+    console.log(element.cpnElement.text)
+    console.log(element.cpnElement.initmark.text.__text)
+    element.cpnElement.initmark.text.__text = "hallo"
+    console.log(element.cpnElement.initmark.text.__text)
+    console.log(element.cpnElement.type);
+    console.log(element.cpnElement.type.text);
+    console.log(element.cpnElement.type.text.__text)
+
+      setTimeout(() => {
+        this.eventBus.fire("element.click", { element: element });
+        this.eventBus.fire("shape.create.end", { elements: [element] });
+        this.eventBus.fire("shape.editing.activate", { shape: element });
+        this.eventBus.fire("shape.contextpad.activate", { shape: element });
+      }, 1);
+
+  }
+
+  createTransitionsForTokenGenerator(){
+    
+  }
+
+  createArcsForTokenGenerator(nameBeginPlace){
+    
+  }
+
+  createVarForTokenGenerator(){
+
+  }
 }
