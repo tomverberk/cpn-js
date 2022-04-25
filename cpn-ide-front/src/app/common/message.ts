@@ -45,6 +45,7 @@ export class Message {
   static LOG_EMPTY_LOG = "log.empty.log";
   static LOG_UNKWOWN_CASE_ID = "log.unknown.case.id";
   static LOG_SAVED = "log.saved"
+  static LOG_NO_RECORDED_EVENTS = "log.no.recorded.events"
 
   static SERVER_GET_BINDINGS = "server.get.bindings";
   static SERVER_GET_SIM_STATE = "server.get.sim.state";
