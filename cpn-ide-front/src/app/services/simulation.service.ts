@@ -55,6 +55,7 @@ export class SimulationService {
       startDateTime: "1970-01-01T00:00",
       timeUnit: "days",
       recordedEvents:"complete",
+      informationLevelIsEvent: true,
     }
   };
 
@@ -444,6 +445,7 @@ export class SimulationService {
       startDateTime: config.startDateTime,
       timeUnit: config.timeUnit,
       recordedEvents: config.recordedEvents,
+      informationLevelIsEvent: config.informationLevelIsEvent,
     };
 
     this.accessCpnService.setOutputPathLog(path)

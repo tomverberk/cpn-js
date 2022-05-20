@@ -2,8 +2,6 @@ package com.indevstudio.cpnide.server.createLog;
 
 //import openXES;
 
-
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,6 +9,7 @@ import java.sql.Array;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import com.indevstudio.cpnide.server.model.PlaceMark;
 import com.indevstudio.cpnide.server.model.SimInfo;
@@ -54,6 +53,9 @@ public class CreateLogContainer {
     private String recordedEvents;
     private Boolean timeHasIncreased = false;
     private Double lastEventTime;
+    private XTrace currentTrace;
+    private Map<String, String> varDeclarations;
+    private Boolean informationLevelIsEvent;
     Queue<Event> bindingQueue = new LinkedList<>();
     Queue<Event> backupBindingQueue = new LinkedList<>();
 
@@ -75,7 +77,36 @@ public class CreateLogContainer {
     public CreateLogContainer getNewContainer(PetriNet net){
         this.net = net;
         setTauTransitions(net);
+        saveDeclarations(net);
         return this;
+    }
+
+    public void saveDeclarations(PetriNet net){
+        varDeclarations = new HashMap<String, String>();
+        for(Label label: net.getLabel()){
+            if(isVarDeclaration(label)){
+                addDeclarationToVarDeclarations(label);
+            }
+        }
+        // if it is a var, add to varDeclaration dataset as a pair <var, colorset>
+    }
+
+    public boolean isVarDeclaration(Label label){
+        String declaration  = label.asString();
+        return declaration.startsWith("var");
+    }
+
+    public void addDeclarationToVarDeclarations(Label label){
+        String declaration  = label.asString();
+        declaration = removeSpaces(declaration);
+        Integer indexOfSeperator = declaration.indexOf(":");
+        String var = declaration.substring(3, indexOfSeperator);
+        String colorSet = declaration.substring(indexOfSeperator + 1, declaration.length()-1);
+        varDeclarations.put(var, colorSet);
+    }
+
+    public String removeSpaces(String string){
+        return string.replace(" ", "");
     }
 
     public void setTauTransitions(PetriNet net){
@@ -124,7 +155,12 @@ public class CreateLogContainer {
         setCaseId(config.caseId);
         setStartTime(config.startDateTime);
         setTimeUnits(config.timeUnit);
+        setInformationLevel(config.informationLevelIsEvent);
         setRecordedEvents(config.getRecordedEvents());
+    }
+
+    public void setInformationLevel(Boolean informationLevelIsEvent){
+        this.informationLevelIsEvent = informationLevelIsEvent;
     }
 
     public void setRecordedEvents(String recordedEvents){
@@ -177,6 +213,7 @@ public class CreateLogContainer {
         XAttributeMap logMap = factory.createAttributeMap();
         log = factory.createLog(logMap);
         traceMap = factory.createAttributeMap();
+
         traces = new HashMap<String, XTrace>();
 
         setTimeHasIncreased(timeLastUpdatedEvent);
@@ -198,6 +235,35 @@ public class CreateLogContainer {
 
         for(XTrace trace : traces.values())
         {
+            if(!informationLevelIsEvent) {
+
+                Queue<XAttribute> traceAttributes = findTraceAttributes(trace);
+                // FILL WITH ALL ATTRIBUTES OF FIRST EVENT
+
+
+                // REMOVE THE ATTRIBUTES FROM THE EVENTS
+                for (int i = 0; i < trace.size(); i++) {
+                    XEvent Xevent = trace.get(i);
+                    XAttributeMap xAttributeMap = Xevent.getAttributes();
+                    for (XAttribute attributeSeenInAllEvents : traceAttributes) {
+                        xAttributeMap.remove(attributeSeenInAllEvents.getKey());
+                    }
+                }
+
+
+                XAttributeMap traceMap = factory.createAttributeMap();
+                for (XAttribute xAttribute : traceAttributes) {
+                    String attributeValue = xAttribute.toString();
+                    if (xAttribute.getKey().equals("traceId")) {
+                        XAttributeLiteral literal = factory.createAttributeLiteral("concept:name", attributeValue, null);
+                        traceMap.put("concept:name", literal);
+                    } else {
+                        XAttributeLiteral literal = factory.createAttributeLiteral(xAttribute.getKey(), attributeValue, null);
+                        traceMap.put(xAttribute.getKey(), literal);
+                    }
+                }
+                trace.setAttributes(traceMap);
+            }
             log.add(trace);
         }
 
@@ -223,6 +289,54 @@ public class CreateLogContainer {
         bindingQueue = backupBindingQueue;
         backupBindingQueue = new LinkedList<>();
 
+    }
+
+    public Queue<XAttribute> findTraceAttributes(XTrace trace){
+        Queue<XAttribute> attributesSeenInFirstEvent = findPossibleTraceAttributesOfFirstEvent(trace);
+
+        Queue<XAttribute> attributesNotSeenInAllEvents = findAttributesNotInAllEvents(trace, attributesSeenInFirstEvent);
+
+        Queue<XAttribute> attributesSeenInAllEvents = attributesSeenInFirstEvent;
+        attributesSeenInAllEvents.removeAll(attributesNotSeenInAllEvents);
+
+        return attributesSeenInAllEvents;
+    }
+
+    public Queue<XAttribute> findPossibleTraceAttributesOfFirstEvent(XTrace trace){
+        Queue<XAttribute> attributesSeenInFirstEvent = new LinkedList<>();
+        XEvent firstXEvent = trace.get(0);
+        XAttributeMap xAttributeMapFirstEvent = firstXEvent.getAttributes();
+        Set<String> keySet = xAttributeMapFirstEvent.keySet();
+        for (String key : keySet) {
+            if(key != "concept:name" && key != "lifecycle:transition" && key != "time:timestamp") {
+                attributesSeenInFirstEvent.add(xAttributeMapFirstEvent.get(key));
+            }
+        }
+        return attributesSeenInFirstEvent;
+    }
+
+    public Queue<XAttribute> findAttributesNotInAllEvents(XTrace trace, Queue<XAttribute> attributesSeenInFirstEvent){
+        Queue<XAttribute> attributesNotSeenInAllEvents = new LinkedList<>();
+        for (int i = 0; i < trace.size(); i++) {
+            XEvent Xevent = trace.get(i);
+            XAttributeMap xAttributeMap = Xevent.getAttributes();
+            Set<String> keySet = xAttributeMap.keySet();
+            for (XAttribute possibleTraceAttribute : attributesSeenInFirstEvent) {
+                Boolean isSeen = false;
+                for (String key : keySet) {
+                    XAttribute attributeOfEvent = xAttributeMap.get(key);
+                    if (attributeOfEvent.equals(possibleTraceAttribute)) {
+                        isSeen = true;
+                    }
+                }
+                if (!isSeen) {
+                    if (!attributesNotSeenInAllEvents.contains(possibleTraceAttribute)) {
+                        attributesNotSeenInAllEvents.add(possibleTraceAttribute);
+                    }
+                }
+            }
+        }
+        return attributesNotSeenInAllEvents;
     }
 
     public void setTimeHasIncreased(Double timeLastUpdatedEvent){
@@ -286,8 +400,9 @@ public class CreateLogContainer {
     public XEvent createEventFromBinding(Event event, XTrace trace){
         XAttributeMap event1AttributeMap = factory.createAttributeMap();
         Binding binding = event.getBinding();
-        Double eventTime = event.getTime();
+
         printBinding(binding);
+        currentTrace = trace;
         List<String> allTargetArcs = getAllTargetArcs(binding);
         //Integer addedTimeByBinding = getTimeFromBinding(binding);
         if (trace != null) {
@@ -295,27 +410,14 @@ public class CreateLogContainer {
         }
 
         // Add time to the event
-        if(timeHasIncreased) {
-            long eventTimeTransformed = (long) (eventTime * timeUnitMultiplier + startTimeLong);
-            XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", eventTimeTransformed, null);
-            event1AttributeMap.put("time", xAttributeTimestamp);
-        }
+        event1AttributeMap = addTimeToEventMap(event1AttributeMap, event);
 
-        // Add lifeCycle transition
-        if(event.isStartEvent()){
-            XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("lifecycle:transition", event.getLifeCycleTransition(), null);
-            event1AttributeMap.put("lifecycle:transition", xAttributeLiteral);
-        } else if(event.isCompleteEvent()){
-            XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("lifecycle:transition", event.getLifeCycleTransition(), null);
-            event1AttributeMap.put("lifecycle:transition", xAttributeLiteral);
-        }
+        // Add predetermined lifecycle transition
+        event1AttributeMap = addLifeCycleTransitionToEventMap(event1AttributeMap, event);
 
-        // Add concept:name and other attributes
-        Queue<Pair<String, String>> transitionInfo = getTransitionInfoFromBinding(binding);
-        for(Pair<String, String> pair: transitionInfo){
-            XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral(pair.getKey(), pair.getValue(), null);
-            event1AttributeMap.put(pair.getKey(), xAttributeLiteral);
-        }
+
+        // Add  other attributes
+        event1AttributeMap = addOtherAttributesToEventMap(event1AttributeMap, event, binding, trace);
 
         // ADD traceID to the event
         XAttributeLiteral xAttributeLiteralCaseId = factory.createAttributeLiteral("traceId", binding.getValueAssignment(caseId).getValue(), null);
@@ -325,6 +427,71 @@ public class CreateLogContainer {
         XEvent xEvent = factory.createEvent(event1AttributeMap);
 
         return xEvent;
+    }
+
+    public XAttributeMap addTimeToEventMap(XAttributeMap eventMap, Event event){
+        if(timeHasIncreased) {
+            Double eventTime = event.getTime();
+            long eventTimeTransformed = (long) (eventTime * timeUnitMultiplier + startTimeLong);
+            XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", eventTimeTransformed, null);
+            eventMap.put("time", xAttributeTimestamp);
+        }
+        return eventMap;
+    }
+
+    public XAttributeMap addLifeCycleTransitionToEventMap(XAttributeMap eventMap, Event event){
+        if(!lifeCycleIsInTransitionName()) {
+            if (event.isStartEvent()) {
+                XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("lifecycle:transition", event.getLifeCycleTransition(), null);
+                eventMap.put("lifecycle:transition", xAttributeLiteral);
+            } else if (event.isCompleteEvent()) {
+                XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("lifecycle:transition", event.getLifeCycleTransition(), null);
+                eventMap.put("lifecycle:transition", xAttributeLiteral);
+            }
+        }
+        return eventMap;
+    }
+
+    public XAttributeMap addOtherAttributesToEventMap(XAttributeMap eventMap, Event event, Binding binding, XTrace trace){
+        Queue<Pair<String, String>> transitionInfo = getTransitionInfoFromBinding(binding, trace ,event);
+        eventMap = placeTransitionInfoInEventMap(eventMap, transitionInfo);
+        return eventMap;
+    }
+
+    public XAttributeMap placeTransitionInfoInEventMap(XAttributeMap eventMap, Queue<Pair<String, String>> transitionInfo){
+        for(Pair<String, String> pair: transitionInfo){
+            if(hasUniqueKey(pair.getKey(), transitionInfo)){
+                XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral(pair.getKey(), pair.getValue(), null);
+                eventMap.put(pair.getKey(), xAttributeLiteral);
+            } else {
+                addListOfDuplicateKeysToEventMap(eventMap, transitionInfo, pair);
+            }
+        }
+        return eventMap;
+    }
+
+    public XAttributeMap addListOfDuplicateKeysToEventMap(XAttributeMap eventMap, Queue<Pair<String,String>> transitionInfo, Pair<String, String> pair){
+        XAttributeList xAttributeList = factory.createAttributeList(pair.getKey(), null);
+        for(Pair<String, String> pair2: transitionInfo){
+            int i = 0;
+            if(pair2.getKey().equals(pair.getKey())) {
+                XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("r" + i, pair2.getValue(), null);
+                xAttributeList.addToCollection(xAttributeLiteral);
+                i++;
+            }
+        }
+        eventMap.put(pair.getKey(), xAttributeList);
+        return eventMap;
+    }
+
+    public Boolean hasUniqueKey(String key, Queue<Pair<String, String>> transitionInfo){
+        Integer count = 0;
+        for(Pair<String, String> pair: transitionInfo){
+            if(pair.getKey().equals(key)){
+                count ++;
+            }
+        }
+        return count == 1;
     }
 
     public Queue<Pair<String, String>> getTransitionInfoFromTransitionLabel(String transitionString){
@@ -341,7 +508,7 @@ public class CreateLogContainer {
                 transitionSubString = transitionSubString.substring(indexOfPlus+1);
                 plusCount ++;
             }
-            if(isLifeCycleTransition(transitionSubString)) {
+            if(isLifeCycleTransition(transitionSubString) && lifeCycleIsInTransitionName()) {
                 info.add(new Pair("concept_name", transitionString.substring(0, indexOfLastPlus + plusCount - 1)));
                 info.add(new Pair("lifecycle:transition", transitionSubString));
             } else {
@@ -352,42 +519,122 @@ public class CreateLogContainer {
         return info;
     }
 
-    public Queue<Pair<String, String>> getTransitionInfoFromBinding(Binding b){
+    public Queue<Pair<String, String>> getTransitionInfoFromBinding(Binding b, XTrace trace, Event event){
         String transitionString = b.getTransitionInstance().getNode().getName().asString();
         Queue<Pair<String, String>> transitionInfo = getTransitionInfoFromTransitionLabel(transitionString);
         List<Arc> targetArcs = b.getTransitionInstance().getNode().getTargetArc();
         for(Arc arc: targetArcs){
-            Pair<String, String> arcInfo = getTransitionInfoFromTargetArc(arc);
-            if(arcInfo != null){
-                transitionInfo.add(arcInfo);
+            Queue<Pair<String, String>> arcInfo = getTransitionInfoFromTargetArc(arc, b, trace);
+            if(arcInfo != null) {
+                for (Pair<String, String> pair : arcInfo) {
+                    transitionInfo.add(pair);
+                }
             }
         }
 
         return transitionInfo;
     }
 
-    public Pair<String, String> getTransitionInfoFromTargetArc(Arc arc){
-        if(arc.getHlinscription().getText().equals(caseId)){
+    public Queue<Pair<String, String>> getTransitionInfoFromTargetArc (Arc arc, Binding b, XTrace trace) {
+        if (arc.getHlinscription().getText().equals(caseId)) {
             return null;
         }
-        // Arc comes from a resource
-        Node place = arc.getSource();
-        String placeString = place.getName().asString();
-        if(placeString.contains("r")){
-            String resourceNr = placeString.replace("r", "");
-            try{
-                Integer.parseInt(resourceNr);
-                return new Pair("org:resource", resourceNr);
-            } catch (Exception e) {
-                return null;
-            }
 
+        Node place = arc.getSource();
+        String placeName = place.getName().asString();
+        String arcInscription = arc.getHlinscription().getText();
+        arcInscription = removeSpaces(arcInscription);
+        return getTransitionInfoFromPlaceNameAndThingies(placeName, arcInscription, b, trace);
+
+
+    }
+
+    public Queue<Pair<String, String>> getTransitionInfoFromPlaceNameAndThingies (String placeName, String arcInscription, Binding b, XTrace trace) {
+        Queue gainedInfo = new LinkedList<>();
+        if (arcInscription.contains("++")) {
+            String[] parts = arcInscription.split(Pattern.quote("++"));
+            gainedInfo = mergeQueus(gainedInfo, getTransitionInfoFromListOfStrings(placeName, parts, b, trace));
+        } else if (arcInscription.contains(",")) {
+            arcInscription = arcInscription.replaceAll("\\(+|\\)", "");
+            String[] parts = arcInscription.split(Pattern.quote(","));
+            gainedInfo = mergeQueus(gainedInfo, getTransitionInfoFromCommaSeperatedIds(placeName, parts, b, trace));
+        } else if (arcInscription.contains("`")) {
+            String[] parts2 = arcInscription.split(Pattern.quote("`"));
+            Integer amount = Integer.parseInt(parts2[0]);
+            for (int i = 0; i < amount; i++) {
+                gainedInfo.add(getTransitionInfoFromPlaceNameAndArcInscription(placeName, parts2[1], b));
+            }
+        } else{
+            gainedInfo.add(getTransitionInfoFromPlaceNameAndArcInscription(placeName, arcInscription, b));
         }
 
+        return gainedInfo;
+    }
+
+    Queue<Pair<String, String>> mergeQueus (Queue<Pair<String, String>> originalQueue, Queue<Pair<String,String>> newQueue){
+        if(newQueue == null){
+            return originalQueue;
+        }
+        for(Pair<String, String> element: newQueue){
+            if(element != null) {
+                originalQueue.add(element);
+            }
+        }
+        return originalQueue;
+    }
+
+
+    public Queue<Pair<String, String>> getTransitionInfoFromCommaSeperatedIds(String placeName, String[] parts, Binding b, XTrace trace) {
+        Queue<Pair<String, String>> gainedInfo = new LinkedList<>();
+        List<String> partsList = new ArrayList<>(Arrays.asList(parts));
+        if(partsList.contains(caseId)){
+            for(String part: parts) {
+                if(!part.equals(caseId)) {
+                    gainedInfo.add(getInfoFromTrace(b.getValueAssignment(part).getValue().replaceAll("^\"+|\"+$", ""), trace));
+                }
+            }
+            // This ARC contains th caseId DO STUFF
+        } else {
+            return getTransitionInfoFromListOfStrings(placeName, parts, b, trace);
+        }
+        return gainedInfo;
+    }
+
+    public Pair<String, String> getInfoFromTrace (String part, XTrace trace){
+        XEvent oldEvent = currentTrace.get(currentTrace.size()-1);
+        XAttributeMap attrMap = oldEvent.getAttributes();
+        Set<String> keySet = attrMap.keySet();
+        for(String key: keySet){
+            String object = String.valueOf(attrMap.get(key));
+            if(part.equals(object)){
+                return new Pair<>(key, part);
+            }
+        }
         return null;
+    }
+
+    public Queue<Pair<String, String>> getTransitionInfoFromListOfStrings(String placeName, String[] parts, Binding b, XTrace trace) {
+        Queue gainedInfo = new LinkedList<>();
+        for (String part : parts) {
+            gainedInfo = mergeQueus(gainedInfo, getTransitionInfoFromPlaceNameAndThingies(placeName, part, b, trace));
+        }
+        return gainedInfo;
+    }
 
 
-    };
+
+    public Pair<String, String> getTransitionInfoFromPlaceNameAndArcInscription (String placeName, String arcInscription, Binding b){
+
+        if(arcInscription.equals(caseId)){
+            return null;
+        }
+        // TODO check if this is a resourcePlace
+        String valueName = b.getValueAssignment(arcInscription).getValue().replaceAll("^\"+|\"+$", "");
+        String colorName = varDeclarations.get(arcInscription);
+        String key = colorName + ":" + arcInscription;
+        return new Pair(key, valueName);
+
+    }
 
 
     public Boolean isLifeCycleTransition(String transitionSubString){
@@ -412,7 +659,7 @@ public class CreateLogContainer {
 
     public XEvent createEvent(String value){
 
-        XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("concept:Name", value, null);
+        XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("concept:name", value, null);
         XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", new Date(), null);
 
         XAttributeMap event1AttributeMap = factory.createAttributeMap();
@@ -496,13 +743,27 @@ public class CreateLogContainer {
 
         if(trace == null){
             XEvent xEvent = createEventFromBinding(event, null);
+            XAttributeMap xAttributeMap = factory.createAttributeMap();
             trace = factory.createTrace(traceMap);
             trace.add(xEvent);
+            if(!informationLevelIsEvent) {
+                trace = addCaseIdToTrace(trace, event);
+            }
             traces.put(id, trace);
         } else {
             XEvent xEvent = createEventFromBinding(event, traces.get(id));
             trace.add(xEvent);
         }
+
+    }
+
+    public XTrace addCaseIdToTrace(XTrace trace, Event event){
+        XAttributeMap traceMap = factory.createAttributeMap();
+
+        // ADD traceID to the event
+        XAttributeLiteral xAttributeLiteralCaseId = factory.createAttributeLiteral("concept:name", event.getBinding().getValueAssignment(caseId).getValue(), null);
+        traceMap.put("concept:name", xAttributeLiteralCaseId);
+        return trace;
     }
 
     public Boolean isRecordingTime(){
@@ -585,11 +846,15 @@ public class CreateLogContainer {
     }
 
     public Boolean recordStartEvent(){
-        return this.recordedEvents.contains("start");
+        return this.recordedEvents.contains("start") || this.recordedEvents.equals("in transition name");
     }
 
     public Boolean recordCompleteEvent(){
         return this.recordedEvents.contains("complete");
+    }
+
+    public Boolean lifeCycleIsInTransitionName(){
+        return this.recordedEvents.equals("in transition name");
     }
 
     public void setCaseId(String caseId){

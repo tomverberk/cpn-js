@@ -24,6 +24,10 @@ public class Event {
         return lifeCycleTransition.equals("start");
     }
 
+    public Boolean lifeCycleIsInTransitionName(){
+        return lifeCycleTransition.equals("in transition name");
+    }
+
     public Boolean isCompleteEvent(){
         return lifeCycleTransition.equals("complete");
     }

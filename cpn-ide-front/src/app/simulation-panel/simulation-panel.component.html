@@ -229,7 +229,14 @@
             <option value="start">start</option>
             <option value="complete">complete</option>
             <option value="start+complete">start+complete</option>
+            <option value="in transition name">in transition name</option>
           </select>
+        </td>
+      </tr>
+      <tr>
+        <td>Keep information on event level</td>
+        <td>
+          <input type = "checkbox" id="informationLevelIsEvent" [(ngModel)]="simulationService.simulationConfig.createLog.informationLevelIsEvent"> 
         </td>
       </tr>
       <tr>
