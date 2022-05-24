@@ -1,14 +1,13 @@
 package com.indevstudio.cpnide.server.controllers;
 
-import com.indevstudio.cpnide.server.createLog.CreateLogConfig;
-import com.indevstudio.cpnide.server.createLog.CreateLogContainer;
+import com.indevstudio.cpnide.server.createLog.LogCreationConfig;
+import com.indevstudio.cpnide.server.createLog.LogCreationController;
 import com.indevstudio.cpnide.server.model.*;
 import com.indevstudio.cpnide.server.net.PetriNetContainer;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
-import org.deckfour.xes.info.XLogInfo;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.impl.XLogImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -193,15 +192,15 @@ public class SimulatorController {
     @ApiOperation(nickname = "Create log", value = "Create log - long running op (from mins to hours)")
     @ApiResponses(
             value = {
-                    @ApiResponse(code = 200, message = "Step success", response = CreateLogContainer.class),
+                    @ApiResponse(code = 200, message = "Step success", response = LogCreationController.class),
                     @ApiResponse(code = 400, message = "Incorrect Request", response = ErrorDescription.class),
                     @ApiResponse(code = 500, message = "Internal error. Object with description", response = ErrorDescription.class)
             })
-    public ResponseEntity doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody CreateLogConfig createLogConfig) {
-        System.out.println(createLogConfig);
+    public ResponseEntity doCreateLog(@RequestHeader(value = "X-SessionId") String sessionId, @RequestBody LogCreationConfig logCreationConfig) {
+        System.out.println(logCreationConfig);
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
             try {
-                ReplicationResp resp = _netContainer.makeCreateLog(sessionId, createLogConfig);
+                ReplicationResp resp = _netContainer.makeCreateLog(sessionId, logCreationConfig);
                 return RequestBaseLogic.HandleRequest(sessionId, () -> ResponseEntity.status(HttpStatus.OK).body(resp));
             } catch(Exception e){
                 System.out.println(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -289,7 +288,7 @@ public class SimulatorController {
         });
     }
 
-    @GetMapping(value = "/sim/outputpath/{path}")
+    @GetMapping(value = "/sim/fileName/{path}")
     @ApiOperation(nickname = "set outputPath", value = "set outputPath")
     @ApiResponses(
             value = {
@@ -299,7 +298,7 @@ public class SimulatorController {
             })
     public ResponseEntity setOutputPath(@RequestHeader(value = "X-SessionId") String sessionId, @PathVariable("path") String path) {
         return RequestBaseLogic.HandleRequest(sessionId, () -> {
-            _netContainer.setOutputPath(sessionId, path);
+            _netContainer.setFileName(sessionId, path);
             NetInfo netInf = new NetInfo(Arrays.asList(),_netContainer.getEnableTransitions(sessionId), _netContainer.getTokensAndMarking(sessionId));
             return ResponseEntity.status(HttpStatus.OK).body(netInf);
         });

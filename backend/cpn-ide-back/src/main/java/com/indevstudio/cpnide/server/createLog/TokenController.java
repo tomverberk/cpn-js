@@ -1,10 +1,6 @@
-package com.indevstudio.cpnide.server.net;
+package com.indevstudio.cpnide.server.createLog;
 
-import com.indevstudio.cpnide.server.createLog.CreateLogContainer;
 import com.indevstudio.cpnide.server.model.PlaceMark;
-import org.cpntools.accesscpn.engine.highlevel.instance.Marking;
-import org.cpntools.accesscpn.model.PetriNet;
-import org.cpntools.accesscpn.model.Place;
 
 import java.util.ArrayList;
 import java.util.HashMap;

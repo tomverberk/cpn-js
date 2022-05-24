@@ -240,6 +240,15 @@
         </td>
       </tr>
       <tr>
+        <td>Export as</td>
+        <td>
+          <select name="exportType" id="exportType" [(ngModel)]="simulationService.simulationConfig.createLog.exportType">
+            <option value="csv">csv</option>
+            <option value="xes">xes</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
         <td></td>
         <td class="full-width text-right">
           <button type="button" class="btn btn-primary" (click)="onRunCreateLog()">
@@ -248,6 +257,7 @@
           </button>
         </td>
       </tr>
+      
     </table>
   </div>
 
