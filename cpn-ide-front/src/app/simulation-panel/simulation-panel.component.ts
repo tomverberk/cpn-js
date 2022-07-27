@@ -110,7 +110,7 @@ export class SimulationPanelComponent implements OnInit, OnDestroy {
           data: {
             title: "Save the log to file",
             input: [
-              { title: "Filename", value: this.modelService.projectName.replace(".cpn", "")},
+              { title: "Filename", value: this.modelService.projectName.replace(".cpn", ".xes") },
             ],
           },
         });

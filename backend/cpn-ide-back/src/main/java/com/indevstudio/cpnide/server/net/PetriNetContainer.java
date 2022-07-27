@@ -1,8 +1,7 @@
 package com.indevstudio.cpnide.server.net;
 
-import com.indevstudio.cpnide.server.createLog.LogCreationConfig;
-import com.indevstudio.cpnide.server.createLog.LogCreationController;
-import com.indevstudio.cpnide.server.createLog.TokenController;
+import com.indevstudio.cpnide.server.createLog.CreateLogConfig;
+import com.indevstudio.cpnide.server.createLog.CreateLogContainer;
 import com.indevstudio.cpnide.server.model.*;
 import com.indevstudio.cpnide.server.model.monitors.MonitorTemplate;
 import com.indevstudio.cpnide.server.model.monitors.MonitorTemplateFactory;
@@ -16,6 +15,7 @@ import org.cpntools.accesscpn.engine.highlevel.*;
 import org.cpntools.accesscpn.engine.highlevel.checker.Checker;
 import org.cpntools.accesscpn.engine.highlevel.instance.Binding;
 import org.cpntools.accesscpn.engine.highlevel.instance.Instance;
+import org.cpntools.accesscpn.engine.highlevel.instance.Marking;
 import org.cpntools.accesscpn.engine.highlevel.instance.ValueAssignment;
 import org.cpntools.accesscpn.model.*;
 import org.cpntools.accesscpn.model.exporter.DOMGenerator;
@@ -23,6 +23,7 @@ import org.cpntools.accesscpn.model.importer.DOMParser;
 import org.cpntools.accesscpn.model.monitors.Monitor;
 import org.deckfour.xes.model.XLog;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.w3c.dom.Document;
 
 import javax.annotation.PostConstruct;
@@ -48,7 +49,7 @@ public class PetriNetContainer {
     private ConcurrentHashMap<String, Checker> usersCheckers = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, HighLevelSimulator> usersSimulator = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, NetInfo> netInf = new ConcurrentHashMap<>();
-    LogCreationController logCreationController;
+    CreateLogContainer createLogContainer;
     TokenController tokenController;
     HighLevelSimulator _sim;
     private final static Object lock = new Object();
@@ -81,16 +82,16 @@ public class PetriNetContainer {
             if (restartSim) {
                 if (_sim != null) {
                     _sim.destroy();
-                    logCreationController.destroy();
+                    createLogContainer.destroy();
                     tokenController.destroy();
                 }
                 CleanOutputPathContent(sessionId);
                 _sim = HighLevelSimulator.getHighLevelSimulator(SimulatorService.getInstance().getNewSimulator());
-                logCreationController = LogCreationController.getInstance().getNewContainer(net);
+                createLogContainer = CreateLogContainer.getInstance().getNewContainer(net);
                 tokenController = TokenController.getInstance().getNewController();
             } else if (_sim == null)
                 _sim = HighLevelSimulator.getHighLevelSimulator(SimulatorService.getInstance().getNewSimulator());
-                logCreationController = LogCreationController.getInstance().getNewContainer(net);
+                createLogContainer = CreateLogContainer.getInstance().getNewContainer(net);
             tokenController = TokenController.getInstance().getNewController();
 
             Checker checker = new Checker(net, null, _sim);
@@ -668,11 +669,11 @@ public class PetriNetContainer {
     }
 
     public void updateCreateLog(String sessionId, Binding b) throws Exception{
-        if(logCreationController.isRecordingTime()) {
+        if(createLogContainer.isRecordingTime()) {
             tokenController.updateMarking(returnTokensAndMarking(sessionId));
         }
         Double timeLastChanged = tokenController.getLastTime();
-        logCreationController.recordActivity(b, getState(sessionId), timeLastChanged);
+        createLogContainer.recordActivity(b, getState(sessionId), timeLastChanged);
     }
 
     public SimInfo getState(String sessionId) throws Exception {
@@ -682,21 +683,21 @@ public class PetriNetContainer {
     }
 
     public XLog getLog(String sessionId) {
-        return logCreationController.getLog();
+        return createLogContainer.getLog();
     }
 
-    public String getOutputPath() { return logCreationController.getOutputPath(); }
+    public String getOutputPath() { return createLogContainer.getOutputPath(); }
 
-    public void setFileName(String sessionId, String path) {
+    public void setOutputPath(String sessionId, String path) {
         HighLevelSimulator sim = usersSimulator.get(sessionId);
-        logCreationController.setOutputPath(path, sim.getOutputDir());
+        createLogContainer.setOutputPath(path, sim.getOutputDir());
     }
 
     public Boolean isLogEmpty(String sessionId) {
-        return logCreationController.isLogEmpty();
+        return createLogContainer.isLogEmpty();
     }
 
-    public Boolean existRecordedEvents(String sessionId) { return logCreationController.hasRecordedEvents(); }
+    public Boolean existRecordedEvents(String sessionId) { return createLogContainer.hasRecordedEvents(); }
 
     public void makeStepWithBinding(String sessionId, String bindingId, String transId) throws Exception {
         // String type = requestBody.get(0).get("type").toString();
@@ -719,12 +720,12 @@ public class PetriNetContainer {
         return getOutputPathContent(sessionId);
     }
 
-    public ReplicationResp makeCreateLog(String sessionId, LogCreationConfig config) throws Exception {
+    public ReplicationResp makeCreateLog(String sessionId, CreateLogConfig config) throws Exception {
         HighLevelSimulator sim = usersSimulator.get(sessionId);
         File fileObj = new File(sim.getOutputDir());
         fileObj.mkdirs();
         log.debug("Writing log to " + sim.getOutputDir());
-        logCreationController.createLog(config, tokenController.getLastTime());
+        createLogContainer.CreateLog(config, tokenController.getLastTime());
         log.debug("Written log to " + sim.getOutputDir());
         return getOutputPathContent(sessionId);
     }
@@ -775,16 +776,16 @@ public class PetriNetContainer {
     }
 
     public void setRecordActivities(Boolean bool){
-        logCreationController.setRecordActivities(bool);
+        createLogContainer.setRecordActivities(bool);
     }
 
     public void setRecordTime(Boolean bool) {
         System.out.println("recordTime is set to " + bool);
-        logCreationController.setRecordTime(bool);
+        createLogContainer.setRecordTime(bool);
     }
 
     public void clearLog(){
-        logCreationController.clearLog();
+        createLogContainer.clearLog();
     }
 
 }
