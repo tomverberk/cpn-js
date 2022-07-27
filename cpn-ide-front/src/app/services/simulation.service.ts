@@ -56,6 +56,7 @@ export class SimulationService {
       timeUnit: "days",
       recordedEvents:"complete",
       informationLevelIsEvent: true,
+      exportType: "xes",
     }
   };
 
@@ -433,22 +434,25 @@ export class SimulationService {
     });
   }
 
-  runCreateLog(path){
+  runCreateLog(fileName){
+    
     console.log(
       this.constructor.name,
       "runCreateLog(), this.simulationConfig.CreateLog = ",
       this.simulationConfig.createLog
     );
     const config = this.simulationConfig.createLog; // 30
+
     const options = {
       caseId: config.caseId,
       startDateTime: config.startDateTime,
       timeUnit: config.timeUnit,
       recordedEvents: config.recordedEvents,
       informationLevelIsEvent: config.informationLevelIsEvent,
+      exportType: config.exportType,
     };
 
-    this.accessCpnService.setOutputPathLog(path)
+    this.accessCpnService.setFileNameOfLog(fileName)
       .then(() => this.accessCpnService.getOutputPathLog())
       .then((result) => {
         this.outputPath = result[0];
@@ -480,8 +484,9 @@ export class SimulationService {
     // });
   }
 
+
   setOutputPath(path){
-    this.accessCpnService.setOutputPathLog(path);
+    this.accessCpnService.setFileNameOfLog(path);
   }
 
   getOutputPath(){

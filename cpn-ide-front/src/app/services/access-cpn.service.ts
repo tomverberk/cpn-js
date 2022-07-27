@@ -1478,20 +1478,17 @@ export class AccessCpnService {
   }
 
 
-  setOutputPathLog(filePath){
-    if (!filePath.toLowerCase().includes(".xes")) {
-      filePath += ".xes";
-    }
+  setFileNameOfLog(fileName){
     return new Promise<void>((resolve, reject) => {
       if (!this.simInitialized || !this.sessionId) {
         resolve();
         return;
       }
 
-      console.log("AccessCpnService, setOutputPath(), " + filePath);
+      console.log("AccessCpnService, setFileName(), " + fileName);
 
       const url =
-        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/outputpath/" + filePath; // ID1412328496
+        this.settingsService.getServerUrl() + "/api/v2/cpn/sim/fileName/" + fileName; // ID1412328496
       this.http
         .get(url, { headers: { "X-SessionId": this.sessionId } })
         .subscribe(

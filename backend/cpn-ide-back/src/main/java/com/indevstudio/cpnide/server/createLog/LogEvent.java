@@ -1,12 +1,12 @@
 package com.indevstudio.cpnide.server.createLog;
 import org.cpntools.accesscpn.engine.highlevel.instance.Binding;
 
-public class Event {
+public class LogEvent {
     private Binding binding;
     private Double time;
     private String lifeCycleTransition;
 
-    public Event(Binding binding, Double time, String lifeCycleTransition){
+    public LogEvent(Binding binding, Double time, String lifeCycleTransition){
         this.binding = binding;
         this.time = time;
         this.lifeCycleTransition = lifeCycleTransition;
