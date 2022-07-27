@@ -9,25 +9,34 @@ import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.factory.XFactory;
 import org.deckfour.xes.model.*;
 
+import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Pattern;
 
 public class LogCreator {
 
-    //CONFIG SETTINGS
+    //Config Info
     LogCreationConfig config;
 
+    //ModelInfo
     Map<String, String> varDeclarations;
 
-    private static LogCreator single_instance = null;
-    private XFactory factory;
+    //Class Variables
     private XLog log;
     private XAttributeMap traceMap;
     private Map<String, XTrace> traces;
 
-    private List<String[]> arrayWithCSVInfo;
+    //Auxilerary classes
+    private XFactory factory;
 
-    private Boolean timeHasIncreased = false;
+    //SingleTon class variables
+    private static LogCreator single_instance = null;
+
+
+
+
+
+    private List<String[]> arrayWithCSVInfo;
 
     private StringFixer stringFixer;
 
@@ -150,7 +159,7 @@ public class LogCreator {
         arrayWithCSVInfo.add(firstRow);
     }
 
-    public void addEventToCSVInput(LogEvent event){
+    public void addEventToCSVInput(LogEvent event) throws ParseException {
         String timeStampEvent = getTimeStampFromEvent(event);
         String lifeCycleTransition = getLifeCycleTransitionFromEvent(event);
         String conceptName = getConceptNameFromEvent(event, lifeCycleTransition);
@@ -163,7 +172,7 @@ public class LogCreator {
         arrayWithCSVInfo.add(newRow);
     }
 
-    public String getTimeStampFromEvent(LogEvent event){
+    public String getTimeStampFromEvent(LogEvent event) throws ParseException {
         String result = "";
         Double eventTime = event.getTime();
         long eventTimeTransformed = (long) (eventTime * config.getTimeUnitMultiplier() + config.getStartTimeLong());
@@ -299,7 +308,7 @@ public class LogCreator {
         System.out.println("Last event = " + trace.get(trace.size()-1));
     }
 
-    public XEvent createXEventFromBinding(LogEvent logEvent){
+    public XEvent createXEventFromBinding(LogEvent logEvent) throws ParseException {
         XAttributeMap event1AttributeMap = factory.createAttributeMap();
         Binding binding = logEvent.getBinding();
 
@@ -322,8 +331,8 @@ public class LogCreator {
         return xEvent;
     }
 
-    public XAttributeMap addTimeToEventMap(XAttributeMap eventMap, LogEvent logEvent){
-        if(timeHasIncreased) {
+    public XAttributeMap addTimeToEventMap(XAttributeMap eventMap, LogEvent logEvent) throws ParseException {
+        if(config.getTimeHasIncreased()) {
             Double eventTime = logEvent.getTime();
             long eventTimeTransformed = (long) (eventTime * config.getTimeUnitMultiplier() + config.getStartTimeLong());
             XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", eventTimeTransformed, null);
@@ -632,10 +641,6 @@ public class LogCreator {
         return trace;
     }
 
-
-    public void setTimeHasIncreased(boolean b) {
-        this.timeHasIncreased = b;
-    }
 
     public Boolean recordStartEvent(){
         return config.recordedEvents.contains("start") || config.recordedEvents.equals("in transition name");
