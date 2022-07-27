@@ -35,29 +35,27 @@ import org.cpntools.accesscpn.model.*;
 import static org.junit.Assert.assertTrue;
 
 public class LogCreationController {
-    //ConfigInfo
+
     LogCreationConfig config;
 
-    //ModelInfo
-    private Map<String, String> varDeclarations;
-    private List<String> tauTransitions = new LinkedList<>();
+    Map<String, String> varDeclarations;
 
-    //SimulationInfo
     private Boolean isRecording = false;
     private Boolean isRecordingTime = true;
-
-    //ClassVariables
+    private List<String> tauTransitions = new LinkedList<>();
     private String pathName;
-    private String folderName;
-    private XLog XESLog;
-    private List<String[]> CSVLog;
-    private Queue<LogEvent> bindingQueue = new LinkedList<>();
-
-    // Auxilerary classes
-    private LogCreator logCreator;
     private StringFixer stringFixer;
 
-    //Singleton class variables
+    private XLog XESLog;
+    private List<String[]> CSVLog;
+
+    private String folderName;
+
+    private LogCreator logCreator;
+
+    Queue<LogEvent> bindingQueue = new LinkedList<>();
+    Queue<LogEvent> backupBindingQueue = new LinkedList<>();
+
     private static LogCreationController single_instance = null;
 
     private LogCreationController(){
@@ -141,11 +139,11 @@ public class LogCreationController {
     //TODO fix this method
 
 
-    //public void setConfig(LogCreationConfig config) throws Exception {
+    public void setConfig(LogCreationConfig config) throws Exception {
         //setCaseId(config.caseId);
         //setStartTime(config.startDateTime);
         //setTimeUnits(config.timeUnit);
-    //}
+    }
 
 
 
@@ -182,7 +180,8 @@ public class LogCreationController {
 
     public void createLog(LogCreationConfig config, Double timeLastUpdatedEvent) throws Exception{
         this.config = config;
-        //config.initializeConfig(timeLastUpdatedEvent);
+        setConfig(config);
+        config.setTimeHasIncreased(timeLastUpdatedEvent);
         logCreator.setBindingQueue(bindingQueue);
         if(config.exportType.equals("csv")){
             CreateCSVLog(config);
