@@ -6,26 +6,34 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-@Data
+
 public class LogCreationConfig {
+    // These values are given from the frontend
     String caseId;
+    String exportType;
+    Boolean informationLevelIsEvent;
+    String recordedEvents;
     String startDateTime;
     String timeUnit;
-    String recordedEvents;
-    Boolean informationLevelIsEvent;
-    String exportType;
 
-    private boolean timeUnitMultiplierHasBeenInitialized;
+
+    // These values need to be initialized from other values
     private long timeUnitMultiplier;
-
-    private boolean startTimeLongHasBeenInitialized;
     private long startTimeLong;
-
-    private boolean timeHasIncreasedHasBeenInitialized;
     private boolean timeHasIncreased;
 
+    private boolean isInitialized = false;
+
+    public void initializeConfig(Double timeLastUpdatedEvent) throws ParseException {
+        setTimeUnitMultiplier();
+        setStartTime();
+        setTimeHasIncreased(timeLastUpdatedEvent);
+        isInitialized = true;
+    }
+
     public long getTimeUnitMultiplier(){
-        if(!timeUnitMultiplierHasBeenInitialized){
+        // RETURN ERROR IF NOT INITIALIZED
+        if(!isInitialized){
             setTimeUnitMultiplier();
         }
         return timeUnitMultiplier;
@@ -58,25 +66,26 @@ public class LogCreationConfig {
                 System.out.println("no correct timeUnit given");
                 throw new IllegalArgumentException(timeUnit + " is not a valid timeunit");
         }
-        this.timeUnitMultiplierHasBeenInitialized = true;
     }
 
-    public long getStartTimeLong(){
-        if(!startTimeLongHasBeenInitialized){
-            setTimeUnitMultiplier();
+    public long getStartTimeLong() throws ParseException {
+        //RETURN ERROR IF NOT INITIALIZED
+        if(!isInitialized){
+            setStartTime();
         }
         return timeUnitMultiplier;
     }
 
     public void setStartTime() throws ParseException {
+        //TODO CATCH THE EXCEPTION OF THROWS
         String modifiedStartDateTimeString = startDateTime.replace("T", " ");
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         Date date = formatter.parse(modifiedStartDateTimeString);
         this.startTimeLong = date.getTime();
-        this.startTimeLongHasBeenInitialized = true;
     }
 
     public Boolean getTimeHasIncreased(){
+        //RETURN ERROR IF NOT INITIALIZED
         return timeHasIncreased;
     }
 

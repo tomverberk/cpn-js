@@ -35,27 +35,29 @@ import org.cpntools.accesscpn.model.*;
 import static org.junit.Assert.assertTrue;
 
 public class LogCreationController {
-
+    //ConfigInfo
     LogCreationConfig config;
 
-    Map<String, String> varDeclarations;
+    //ModelInfo
+    private Map<String, String> varDeclarations;
+    private List<String> tauTransitions = new LinkedList<>();
 
+    //SimulationInfo
     private Boolean isRecording = false;
     private Boolean isRecordingTime = true;
-    private List<String> tauTransitions = new LinkedList<>();
-    private String pathName;
-    private StringFixer stringFixer;
 
+    //ClassVariables
+    private String pathName;
+    private String folderName;
     private XLog XESLog;
     private List<String[]> CSVLog;
+    private Queue<LogEvent> bindingQueue = new LinkedList<>();
 
-    private String folderName;
-
+    // Auxilerary classes
     private LogCreator logCreator;
+    private StringFixer stringFixer;
 
-    Queue<LogEvent> bindingQueue = new LinkedList<>();
-    Queue<LogEvent> backupBindingQueue = new LinkedList<>();
-
+    //Singleton class variables
     private static LogCreationController single_instance = null;
 
     private LogCreationController(){
@@ -139,11 +141,11 @@ public class LogCreationController {
     //TODO fix this method
 
 
-    public void setConfig(LogCreationConfig config) throws Exception {
+    //public void setConfig(LogCreationConfig config) throws Exception {
         //setCaseId(config.caseId);
         //setStartTime(config.startDateTime);
         //setTimeUnits(config.timeUnit);
-    }
+    //}
 
 
 
@@ -180,8 +182,7 @@ public class LogCreationController {
 
     public void createLog(LogCreationConfig config, Double timeLastUpdatedEvent) throws Exception{
         this.config = config;
-        setConfig(config);
-        config.setTimeHasIncreased(timeLastUpdatedEvent);
+        //config.initializeConfig(timeLastUpdatedEvent);
         logCreator.setBindingQueue(bindingQueue);
         if(config.exportType.equals("csv")){
             CreateCSVLog(config);
