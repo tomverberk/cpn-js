@@ -12,8 +12,6 @@ import java.util.stream.Stream;
 
 import com.indevstudio.cpnide.server.model.SimInfo;
 
-//import javafx.util.Pair;
-import javafx.util.Pair;
 import lombok.extern.java.Log;
 import org.cpntools.accesscpn.model.Object;
 import org.cpntools.accesscpn.model.impl.ArcImpl;
@@ -182,7 +180,7 @@ public class LogCreationController {
 
     public void createLog(LogCreationConfig config, Double timeLastUpdatedEvent) throws Exception{
         this.config = config;
-        //config.initializeConfig(timeLastUpdatedEvent);
+        config.initializeConfig(timeLastUpdatedEvent);
         logCreator.setBindingQueue(bindingQueue);
         if(config.exportType.equals("csv")){
             CreateCSVLog(config);

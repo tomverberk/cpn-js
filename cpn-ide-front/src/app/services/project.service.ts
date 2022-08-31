@@ -200,7 +200,7 @@ export class ProjectService {
 
     xml = xmlBeautify(xml);
 
-    this.fileService.saveAsText(xml, filename, (filePath) => {
+    this.fileService.saveCPNAsText(xml, filename, (filePath) => {
       console.log("fileService.saveAsText", filePath);
 
       const regex = /[^\/^\\]+$/gm;

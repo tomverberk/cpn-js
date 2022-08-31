@@ -39,10 +39,9 @@ public class TokenController {
         idOfPlacesChangedOnLastStep.clear();
         if(lastMarking == null){
             SetMarking(newMarking);
-            this.lastMarking = newMarking;
-            return;
+        } else {
+            SetDifference(newMarking);
         }
-        SetDifference(newMarking);
         this.lastMarking = newMarking;
         setSmallestTimeTokenLastChanged();
     }

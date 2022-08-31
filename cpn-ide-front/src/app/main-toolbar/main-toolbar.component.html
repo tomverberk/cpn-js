@@ -179,13 +179,15 @@
     <!-- Auto -->
     <li class="nav-item">
       <ng-container *ngIf="accessCpnService.isRecordActivities">
-        <li class="nav-item">
-          <a (click)="onRecordTime()" class="nav-link" [ngClass]="accessCpnService.isRecordTime ? 'red' : 'grey'"
+        <ng-container *ngIf="accessCpnService.isSimulation">
+          <li class="nav-item">
+            <a (click)="onRecordTime()" class="nav-link" [ngClass]="accessCpnService.isRecordTime ? 'red' : 'grey'"
             href="#">
-            <i [ngClass]="accessCpnService.isRecordTime ? 'far fa-check-square' : 'far fa-square'"></i>
-            <span> Record Time </span>
-          </a>
-        </li>
+              <i [ngClass]="accessCpnService.isRecordTime ? 'far fa-check-square' : 'far fa-square'"></i>
+              <span> Record Time </span>
+           </a>
+          </li>
+        </ng-container>
       </ng-container>
     </li>
 

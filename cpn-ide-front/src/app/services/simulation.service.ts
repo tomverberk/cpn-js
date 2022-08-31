@@ -435,7 +435,6 @@ export class SimulationService {
   }
 
   runCreateLog(fileName){
-    
     console.log(
       this.constructor.name,
       "runCreateLog(), this.simulationConfig.CreateLog = ",
@@ -505,7 +504,7 @@ export class SimulationService {
     });
   }
 
-  public saveLogToFile(filename: string) {
+  public async saveLogToFile(filename: string) {
     if (!filename.toLowerCase().includes(".xes")) {
       filename += ".xes";
     }
@@ -515,15 +514,18 @@ export class SimulationService {
       cloneObject(this.modelService.getProjectData())
     );
 
-    this.accessCpnService.getLog().then((data: any) => {
-      if (data) {
-        console.log(data);
-        console.log("data was returned");
-      }
-    });
+    this.fileService.getLogNameFromElectronService(filename, (newFileName) => {
+       this.runCreateLog(newFileName);
+
+       this.accessCpnService.getLog().then((data: any) => {
+        if (data) {
+          console.log(data);
+          console.log("data was returned");
+        }
+      });
+    })
     
-    this.fileService.saveAsText(xml, filename, (filePath) => {
-      console.log("fileService.saveAsText", filePath);
-    });
+
+    
   }
 }
