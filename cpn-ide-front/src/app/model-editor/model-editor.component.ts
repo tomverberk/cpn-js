@@ -1144,20 +1144,10 @@ export class ModelEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     return list;
   }
 
-  // @HostListener('document:keydown.control.z', ['$event']) onKeydownCtrXHandler(event: KeyboardEvent) {
-  //   console.log('undo perform');
-  //   // this.getUndo();
-  //   event.preventDefault();
-  // }
-  //
-  // @HostListener('document:keydown.control.y', ['$event']) onKeydownCtrlYHandler(event: KeyboardEvent) {
-  //   console.log('redo perform');
-  //   // this.getRedo();
-  //   event.preventDefault();
-  // }
 
+  //TODO This is a template for a possible tokn generator, I was not able to complete this, this can be used as a template when you want to create a generator
+  //Creates a tokengenerator
   onCreateGenerator(){
-    console.log("OnCreateGenerator")
     let nameBeginPlace = "AVert";
     let amountOfTokens = 10;
     this.createPlacesForTokenGenerator(amountOfTokens, nameBeginPlace);
@@ -1166,6 +1156,8 @@ export class ModelEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     this.createArcsForTokenGenerator(nameBeginPlace);
   }
 
+  //PART OF TOKENGENERATOR TEMPLATE
+  //Creates the placs for a tokengenerator
   createPlacesForTokenGenerator(amountOfTokens, nameBeginPlace){
     const allPlaces = this.modelService.getAllPlaces();
     let beginPlace = allPlaces.find(element => element.text === nameBeginPlace);
@@ -1180,6 +1172,8 @@ export class ModelEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     this.createShape(CPN_TRANSITION, position);
   }
 
+  //PART OF TOKENGENERATOR TEMPLATE
+  //Creates the shapes of th tokengenerator
   createShape(type, position){
     let element = this.cpnFactory.createShape(
       undefined,
@@ -1206,14 +1200,17 @@ export class ModelEditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   }
 
+  //PART OF TOKENGENERATOR TEMPLATE
   createTransitionsForTokenGenerator(){
     
   }
 
+  //PART OF TOKENGENERATOR TEMPLATE
   createArcsForTokenGenerator(nameBeginPlace){
     
   }
 
+  //PART OF TOKENGENERATOR TEMPLATE
   createVarForTokenGenerator(){
 
   }

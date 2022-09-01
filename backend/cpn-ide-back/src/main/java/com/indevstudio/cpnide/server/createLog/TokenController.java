@@ -20,6 +20,10 @@ public class TokenController {
 
     }
 
+    /**
+     * Singleton class
+     * @return the tokenController if it exists otherwise creates a new one
+     */
     public static TokenController getInstance() {
         if(single_instance == null){
             single_instance = new TokenController();
@@ -35,6 +39,11 @@ public class TokenController {
         single_instance = null;
     }
 
+    /**
+     * Update the marking currently saved in the tokenController.
+     * @param newMarking the new marking
+     * @throws Exception
+     */
     public void updateMarking(List<PlaceMark> newMarking) throws Exception{
         idOfPlacesChangedOnLastStep.clear();
         if(lastMarking == null){
@@ -46,10 +55,20 @@ public class TokenController {
         setSmallestTimeTokenLastChanged();
     }
 
+    /**
+     * Set a marking
+     * @param marking
+     * @throws Exception
+     */
     public void SetMarking(List<PlaceMark> marking) throws Exception{
         SetPlaceInfos(marking);
     }
 
+    /**
+     * Set the difference between the new marking and the old marking
+     * @param newMarking
+     * @throws Exception
+     */
     public void SetDifference(List<PlaceMark> newMarking) throws Exception{
         List<PlaceMark> result = new ArrayList<>();
         List<PlaceMark> copyLastMarking = lastMarking.stream().collect(Collectors.toList());
@@ -59,18 +78,30 @@ public class TokenController {
         SetPlaceInfos(copyNewMarking, copyLastMarking);
     }
 
+    /**
+     * Set the info for each place given the new marking
+     */
     public void SetPlaceInfos(List<PlaceMark> newMarking) throws Exception{
         for(int i = 0; i< newMarking.size(); i++){
             SetPlaceInfo(newMarking.get(i), "");
         }
     }
 
+    /**
+     * Set the info of the place given the new marking and the old marking
+     * @param newMarking
+     * @param oldMarking
+     * @throws Exception
+     */
     public void SetPlaceInfos(List<PlaceMark> newMarking, List<PlaceMark> oldMarking) throws Exception{
         for(int i = 0; i< newMarking.size(); i++){
             SetPlaceInfo(newMarking.get(i), oldMarking.get(i).getMarking());
         }
     }
 
+    /**
+     * Function that sets the time of the smallest that is present in the current marking, but was not present in the last marking. This is thus the lowest time of the any of the newly created tokens
+     */
     public void setSmallestTimeTokenLastChanged(){
         Double lowestTime = Double.MAX_VALUE;
         for(String id: idOfPlacesChangedOnLastStep){
@@ -90,6 +121,12 @@ public class TokenController {
         return this.lastTime;
     }
 
+    /**
+     * Set the info of a place given the old marking for the place and the new marking for the place
+     * @param placeMarkNew
+     * @param markingOld
+     * @throws Exception
+     */
     public void SetPlaceInfo(PlaceMark placeMarkNew, String markingOld) throws Exception{
         if(placeMarkNew.getMarking().equals("empty")){
             placeMapping.put(placeMarkNew.getId(), null);
@@ -100,6 +137,14 @@ public class TokenController {
         placeMapping.put(placeMarkNew.getId(), newTimedTokens);
     }
 
+    /**
+     * Gets all the token that are new in the marking of a place, thus that were not present in the old marking of that place.
+     * Seperates the entire marking of a place on the "++" sign
+     * @param markingNew
+     * @param markingOld
+     * @return A list of tokens present in the new marking and not present in the old marking
+     * @throws Exception
+     */
     public List<TimedToken> getNewTimedTokens(String markingNew, String markingOld) throws Exception{
         List<TimedToken> timedTokens = new ArrayList<TimedToken>();
         while(markingNew.contains("++")){
@@ -122,8 +167,13 @@ public class TokenController {
         return timedTokens;
     }
 
-    //TODO MAKE THIS INTO AN ACTUAL LIST OF ELEMENTS
 
+    /**
+     * Gets the token from part of a place
+     * @param marking
+     * @return
+     * @throws Exception
+     */
     public TimedToken createSingleTokenFromSingleMarking(String marking) throws Exception{
         List<TimedToken> timedTokens = new ArrayList<TimedToken>();
         Integer indexOfApostrofe = marking.indexOf("`");

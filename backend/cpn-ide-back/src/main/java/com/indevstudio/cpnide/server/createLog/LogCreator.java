@@ -193,7 +193,6 @@ public class LogCreator {
 
     /**
      * Method that adds an event to the CSV file
-     * TODO I don't know if this method works
      * @param event
      * @throws ParseException
      */
@@ -628,28 +627,6 @@ public class LogCreator {
         return getTransitionInfoFromArcInscriptionNew(arcInscription, b);
     }
 
-//    public Queue<Pair<String, String>> getTransitionInfoFromArcInscription(String arcInscription, Binding b, XTrace trace) {
-//        Queue gainedInfo = new LinkedList<>();
-//        if (arcInscription.contains("++")) {
-//            String[] parts = arcInscription.split(Pattern.quote("++"));
-//            gainedInfo = mergeQueus(gainedInfo, getTransitionInfoFromListOfStrings(parts, b, trace));
-//        } else if (arcInscription.contains(",")) {
-//            arcInscription = arcInscription.replaceAll("\\(+|\\)", "");
-//            String[] parts = arcInscription.split(Pattern.quote(","));
-//            gainedInfo = mergeQueus(gainedInfo, getTransitionInfoFromCommaSeperatedIds(parts, b, trace));
-//        } else if (arcInscription.contains("`")) {
-//            String[] parts2 = arcInscription.split(Pattern.quote("`"));
-//            Integer amount = Integer.parseInt(parts2[0]);
-//            for (int i = 0; i < amount; i++) {
-//                gainedInfo.add(getTransitionInfoFromBindingVariable(parts2[1], b));
-//            }
-//        } else{
-//            gainedInfo.add(getTransitionInfoFromBindingVariable(arcInscription, b));
-//        }
-//
-//        return gainedInfo;
-//    }
-
     /**
      * Get the information from the inscription of an arc
      * @param arcInscription the inscription we want information from
@@ -690,9 +667,9 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Seperates the arcInscription into a list of strings, seperates on both "+" sign and "," sign
      * @param arcInscription
-     * @return
+     * @return a list of strings from the arcInscription
      */
     public String[] SeperateArcInScriptionInListOfStrings(String arcInscription){
         arcInscription = arcInscription.replaceAll("\\(+|\\)", "");
@@ -706,10 +683,10 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Merges 2 arrays
      * @param originalArray
      * @param toAddArray
-     * @return
+     * @return the merging of the two arrays
      */
     public String[] mergeArrays(String[] originalArray, String[] toAddArray){
         int originalArrayLength = originalArray.length;
@@ -722,10 +699,10 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Gets the transitionInfo from the bindingVariable
      * @param arcInscription
      * @param b
-     * @return
+     * @return the information from the bindingVariables excluding the value assigned for the caseId binding
      */
     public TransitionInfo getTransitionInfoFromBindingVariable(String arcInscription, Binding b){
         if(arcInscription.equals(config.caseId)){
@@ -740,57 +717,8 @@ public class LogCreator {
 
     }
 
-//    Queue<Pair<String, String>> mergeQueus (Queue<Pair<String, String>> originalQueue, Queue<Pair<String,String>> newQueue){
-//        if(newQueue == null){
-//            return originalQueue;
-//        }
-//        for(Pair<String, String> element: newQueue){
-//            if(element != null) {
-//                originalQueue.add(element);
-//            }
-//        }
-//        return originalQueue;
-//    }
-
-//    public Queue<Pair<String, String>> getTransitionInfoFromCommaSeperatedIds(String[] parts, Binding b, XTrace trace) {
-//        Queue<Pair<String, String>> gainedInfo = new LinkedList<>();
-//        List<String> partsList = new ArrayList<>(Arrays.asList(parts));
-//        if(partsList.contains(caseId)){
-//            for(String part: parts) {
-//                if(!part.equals(caseId)) {
-//                    gainedInfo.add(getInfoFromTrace(b.getValueAssignment(part).getValue().replaceAll("^\"+|\"+$", ""), trace));
-//                }
-//            }
-//            // This ARC contains th caseId DO STUFF
-//        } else {
-//            return getTransitionInfoFromListOfStrings(parts, b, trace);
-//        }
-//        return gainedInfo;
-//    }
-
-//    public Pair<String, String> getInfoFromTrace (String part, XTrace trace){
-//        XEvent oldEvent = currentTrace.get(currentTrace.size()-1);
-//        XAttributeMap attrMap = oldEvent.getAttributes();
-//        Set<String> keySet = attrMap.keySet();
-//        for(String key: keySet){
-//            String object = String.valueOf(attrMap.get(key));
-//            if(part.equals(object)){
-//                return new Pair<>(key, part);
-//            }
-//        }
-//        return null;
-//    }
-
-//    public Queue<Pair<String, String>> getTransitionInfoFromListOfStrings(String[] parts, Binding b, XTrace trace) {
-//        Queue gainedInfo = new LinkedList<>();
-//        for (String part : parts) {
-//            gainedInfo = mergeQueus(gainedInfo, getTransitionInfoFromArcInscription(part, b, trace));
-//        }
-//        return gainedInfo;
-//    }
-
     /**
-     *
+     * Adds an LogEvent to the log
      * @param logEvent
      * @throws Exception
      */
@@ -798,7 +726,6 @@ public class LogCreator {
         Binding b = logEvent.getBinding();
         String id = null;
 
-        //System.out.println(b.getTransitionInstance().getNode().getName().asString());
         for(ValueAssignment assignment: b.getAllAssignments())
         {
             if(assignment.getName().equals(config.caseId)){
@@ -826,10 +753,10 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Adds the caseId attribute to a trace
      * @param trace
-     * @param logEvent
-     * @return
+     * @param logEvent this event contains the caseId variable
+     * @return the trace with as attribute the caseId and its value
      */
     public XTrace addCaseIdToTraceAttributes(XTrace trace, LogEvent logEvent){
         traceMap = trace.getAttributes();
@@ -842,23 +769,23 @@ public class LogCreator {
 
 
     /**
-     *
-     * @return
+     * Boolean that shows wether we want to show the startEvents in the log
+     * @return true if we want startEvents in the log false otherwise
      */
     public Boolean recordStartEvent(){
         return config.recordedEvents.contains("start") || config.recordedEvents.equals("in transition name");
     }
 
     /**
-     *
-     * @return
+     * Boolean that shows wether we want to show the completeEvents in the log
+     * @return true if we want completeEvents in the log false otherwise
      */
     public Boolean recordCompleteEvent(){
         return config.recordedEvents.contains("complete");
     }
 
     /**
-     *
+     * Checks wether we want to record in transition Name for the recordedEvents attribute.
      * @return
      */
     public Boolean lifeCycleIsInTransitionName(){
@@ -866,7 +793,7 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Sets the varDeclarations
      * @param varDeclarations
      */
     public void setVarDeclarations(Map<String, String> varDeclarations) {
@@ -874,7 +801,7 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Sets the bindingqueue
      * @param bindingQueue
      */
     public void setBindingQueue(Queue<LogEvent> bindingQueue) {
