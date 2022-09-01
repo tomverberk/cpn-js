@@ -1,6 +1,5 @@
 package com.indevstudio.cpnide.server.createLog;
 
-import javafx.util.Pair;
 import org.cpntools.accesscpn.engine.highlevel.instance.Binding;
 import org.cpntools.accesscpn.engine.highlevel.instance.ValueAssignment;
 import org.cpntools.accesscpn.model.Arc;
@@ -43,12 +42,19 @@ public class LogCreator {
     Queue<LogEvent> bindingQueue;
     Queue<LogEvent> backupBindingQueue = new LinkedList<>();
 
+    /**
+     *
+     */
     private LogCreator(){
         factory = XFactoryRegistry.instance().currentDefault();
         bindingQueue = new LinkedList<>();
         stringFixer = new StringFixer();
     }
 
+    /**
+     *
+     * @return
+     */
     public static LogCreator getInstance() {
         if(single_instance == null){
             single_instance = new LogCreator();
@@ -65,7 +71,14 @@ public class LogCreator {
         single_instance = null;
     }
 
+    /**
+     *
+     * @param config
+     * @return
+     * @throws Exception
+     */
     public XLog CreateXESLog(LogCreationConfig config) throws Exception {
+        System.out.println("Enter create log");
         this.config = config;
         XAttributeMap logMap = factory.createAttributeMap();
         log = factory.createLog(logMap);
@@ -85,32 +98,7 @@ public class LogCreator {
         for(XTrace trace : traces.values())
         {
             if(!config.informationLevelIsEvent) {
-
-                Queue<XAttribute> traceAttributes = findTraceAttributes(trace);
-                // FILL WITH ALL ATTRIBUTES OF FIRST EVENT
-
-                // REMOVE THE ATTRIBUTES FROM THE EVENTS
-                for (int i = 0; i < trace.size(); i++) {
-                    XEvent Xevent = trace.get(i);
-                    XAttributeMap xAttributeMap = Xevent.getAttributes();
-                    for (XAttribute attributeSeenInAllEvents : traceAttributes) {
-                        xAttributeMap.remove(attributeSeenInAllEvents.getKey());
-                    }
-                }
-
-
-                XAttributeMap traceMap = factory.createAttributeMap();
-                for (XAttribute xAttribute : traceAttributes) {
-                    String attributeValue = xAttribute.toString();
-                    if (xAttribute.getKey().equals("traceId")) {
-                        XAttributeLiteral literal = factory.createAttributeLiteral("concept:name", attributeValue, null);
-                        traceMap.put("concept:name", literal);
-                    } else {
-                        XAttributeLiteral literal = factory.createAttributeLiteral(xAttribute.getKey(), attributeValue, null);
-                        traceMap.put(xAttribute.getKey(), literal);
-                    }
-                }
-                trace.setAttributes(traceMap);
+                createTraceAttributes(trace);
             }
             log.add(trace);
         }
@@ -120,9 +108,48 @@ public class LogCreator {
 
         //TODO REREPLACE THIS WITH FILENAME
         return log;
-
     }
 
+    /**
+     *
+     * @param trace
+     * @return
+     */
+    public XTrace createTraceAttributes(XTrace trace){
+        Queue<XAttribute> traceAttributes = findTraceAttributes(trace);
+        // FILL WITH ALL ATTRIBUTES OF FIRST EVENT
+
+        // REMOVE THE ATTRIBUTES FROM THE EVENTS
+        for (int i = 0; i < trace.size(); i++) {
+            XEvent Xevent = trace.get(i);
+            XAttributeMap xAttributeMap = Xevent.getAttributes();
+            for (XAttribute attributeSeenInAllEvents : traceAttributes) {
+                xAttributeMap.remove(attributeSeenInAllEvents.getKey());
+            }
+        }
+
+
+        traceMap = trace.getAttributes();
+        for (XAttribute xAttribute : traceAttributes) {
+            String attributeValue = xAttribute.toString();
+            if (xAttribute.getKey().equals("traceId")) {
+                XAttributeLiteral literal = factory.createAttributeLiteral("concept:name", attributeValue, null);
+                traceMap.put("concept:name", literal);
+            } else {
+                XAttributeLiteral literal = factory.createAttributeLiteral(xAttribute.getKey(), attributeValue, null);
+                traceMap.put(xAttribute.getKey(), literal);
+            }
+        }
+        trace.setAttributes(traceMap);
+        return trace;
+    }
+
+    /**
+     *
+     * @param config
+     * @return
+     * @throws Exception
+     */
     public List<String[]> CreateCSVLog(LogCreationConfig config) throws Exception {
         this.config = config;
 
@@ -145,6 +172,9 @@ public class LogCreator {
 
     }
 
+    /**
+     *
+     */
     public void determineColumnValuesOfCSV(){
         //Timestamp
         //LifeCycleTransition
@@ -159,6 +189,11 @@ public class LogCreator {
         arrayWithCSVInfo.add(firstRow);
     }
 
+    /**
+     *
+     * @param event
+     * @throws ParseException
+     */
     public void addEventToCSVInput(LogEvent event) throws ParseException {
         String timeStampEvent = getTimeStampFromEvent(event);
         String lifeCycleTransition = getLifeCycleTransitionFromEvent(event);
@@ -172,6 +207,12 @@ public class LogCreator {
         arrayWithCSVInfo.add(newRow);
     }
 
+    /**
+     *
+     * @param event
+     * @return
+     * @throws ParseException
+     */
     public String getTimeStampFromEvent(LogEvent event) throws ParseException {
         String result = "";
         Double eventTime = event.getTime();
@@ -181,6 +222,11 @@ public class LogCreator {
         return result;
     }
 
+    /**
+     *
+     * @param event
+     * @return
+     */
     public String getLifeCycleTransitionFromEvent(LogEvent event){
         String result = "";
         if(!lifeCycleIsInTransitionName()) {
@@ -202,6 +248,12 @@ public class LogCreator {
         return result;
     }
 
+    /**
+     *
+     * @param event
+     * @param lifeCycleTransitionValue
+     * @return
+     */
     public String getConceptNameFromEvent(LogEvent event, String lifeCycleTransitionValue){
         String result = "";
         if(!lifeCycleIsInTransitionName()) {
@@ -212,6 +264,11 @@ public class LogCreator {
         return result;
     }
 
+    /**
+     *
+     * @param event
+     * @return
+     */
     public String[] getVarDeclarationsFromEvent(LogEvent event){
         Set<String> keySet = varDeclarations.keySet();
         String[] result = new String[keySet.size()];
@@ -233,7 +290,10 @@ public class LogCreator {
     }
 
 
-
+    /**
+     * @param trace
+     * @return
+     */
     public Queue<XAttribute> findTraceAttributes(XTrace trace){
         Queue<XAttribute> attributesSeenInFirstEvent = findPossibleTraceAttributesOfFirstEvent(trace);
 
@@ -245,6 +305,10 @@ public class LogCreator {
         return attributesSeenInAllEvents;
     }
 
+    /**
+     * @param trace
+     * @return
+     */
     public Queue<XAttribute> findPossibleTraceAttributesOfFirstEvent(XTrace trace){
         Queue<XAttribute> attributesSeenInFirstEvent = new LinkedList<>();
         XEvent firstXEvent = trace.get(0);
@@ -258,6 +322,12 @@ public class LogCreator {
         return attributesSeenInFirstEvent;
     }
 
+    /**
+     *
+     * @param trace
+     * @param attributesSeenInFirstEvent
+     * @return
+     */
     public Queue<XAttribute> findAttributesNotInAllEvents(XTrace trace, Queue<XAttribute> attributesSeenInFirstEvent){
         Queue<XAttribute> attributesNotSeenInAllEvents = new LinkedList<>();
         for (int i = 0; i < trace.size(); i++) {
@@ -282,6 +352,10 @@ public class LogCreator {
         return attributesNotSeenInAllEvents;
     }
 
+    /**
+     *
+     * @param binding
+     */
     public void printBinding(Binding binding){
         System.out.println("binding= " + binding);
         System.out.println("getAllAssignments =" + binding.getAllAssignments());
@@ -299,15 +373,12 @@ public class LogCreator {
 
     }
 
-    public List<String> getAllTargetArcs(Binding b){
-        return null;
-    }
-
-    public void printTrace(XTrace trace){
-        System.out.println("Trace = " + trace);
-        System.out.println("Last event = " + trace.get(trace.size()-1));
-    }
-
+    /**
+     *
+     * @param logEvent
+     * @return
+     * @throws ParseException
+     */
     public XEvent createXEventFromBinding(LogEvent logEvent) throws ParseException {
         XAttributeMap event1AttributeMap = factory.createAttributeMap();
         Binding binding = logEvent.getBinding();
@@ -322,8 +393,8 @@ public class LogCreator {
         event1AttributeMap = addRemainingAttributesToEventMap(event1AttributeMap, binding);
 
         // ADD traceID to the event
-        XAttributeLiteral xAttributeLiteralCaseId = factory.createAttributeLiteral("traceId", binding.getValueAssignment(config.caseId).getValue(), null);
-        event1AttributeMap.put("traceId", xAttributeLiteralCaseId);
+        //XAttributeLiteral xAttributeLiteralCaseId = factory.createAttributeLiteral("traceId", binding.getValueAssignment(config.caseId).getValue(), null);
+        //event1AttributeMap.put("traceId", xAttributeLiteralCaseId);
 
         // create the event from the eventMap
         XEvent xEvent = factory.createEvent(event1AttributeMap);
@@ -331,16 +402,51 @@ public class LogCreator {
         return xEvent;
     }
 
+    /**
+     *
+     * @param eventMap
+     * @param logEvent
+     * @return
+     * @throws ParseException
+     */
     public XAttributeMap addTimeToEventMap(XAttributeMap eventMap, LogEvent logEvent) throws ParseException {
         if(config.getTimeHasIncreased()) {
-            Double eventTime = logEvent.getTime();
-            long eventTimeTransformed = (long) (eventTime * config.getTimeUnitMultiplier() + config.getStartTimeLong());
-            XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", eventTimeTransformed, null);
+            double eventTime = logEvent.getTime();
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(new Date(config.getStartTimeLong()));
+            calendar.add(config.getCalendarValue(), (int) eventTime);
+            if(!config.getTimeUnit().equals("years") && !config.getTimeUnit().equals(("months"))){
+                calendar.add(Calendar.MILLISECOND, (int) (eventTime % 1 * config.getTimeUnitMultiplier()));
+            } else { //value becomes to large for int
+                //Months and decimal numbers don't work well together
+                if(config.getTimeUnit().equals("months") && eventTime % 1 != 0){
+                    int month = calendar.get(Calendar.MONTH);
+                    double monthMultiplier;
+                    if(month == 1){
+                        monthMultiplier = 28.0/31.0;
+                    } else if (month == 3 || month == 5 || month == 8 || month == 10){
+                        monthMultiplier = 30.0/31.0;
+                    } else {
+                        monthMultiplier = 1;
+                    }
+                    calendar.add(Calendar.SECOND, (int) (eventTime % 1 * monthMultiplier * (config.getTimeUnitMultiplier()/1000)));
+                } else {
+                    calendar.add(Calendar.SECOND, (int) (eventTime % 1 * (config.getTimeUnitMultiplier() / 1000)));
+                }
+            }
+
+            XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", calendar.getTime(), null);
             eventMap.put("time", xAttributeTimestamp);
         }
         return eventMap;
     }
 
+    /**
+     *
+     * @param eventMap
+     * @param logEvent
+     * @return
+     */
     public XAttributeMap addLifeCycleTransitionFromConfigToEventMap(XAttributeMap eventMap, LogEvent logEvent){
         if(!lifeCycleIsInTransitionName()) {
             if (logEvent.isStartEvent()) {
@@ -354,49 +460,79 @@ public class LogCreator {
         return eventMap;
     }
 
+    /**
+     *
+     * @param eventMap
+     * @param binding
+     * @return
+     */
     public XAttributeMap addRemainingAttributesToEventMap(XAttributeMap eventMap, Binding binding){
-        Queue<Pair<String, String>> transitionInfo = getTransitionInfoFromBinding(binding);
+        Queue<TransitionInfo> transitionInfo = getTransitionInfoFromBinding(binding);
         eventMap = placeTransitionInfoInEventMap(eventMap, transitionInfo);
         return eventMap;
     }
 
-    public XAttributeMap placeTransitionInfoInEventMap(XAttributeMap eventMap, Queue<Pair<String, String>> transitionInfo){
-        for(Pair<String, String> pair: transitionInfo){
-            if(hasUniqueKey(pair.getKey(), transitionInfo)){
-                XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral(pair.getKey(), pair.getValue(), null);
-                eventMap.put(pair.getKey(), xAttributeLiteral);
+    /**
+     *
+     * @param eventMap
+     * @param transitionInfoQueue
+     * @return
+     */
+    public XAttributeMap placeTransitionInfoInEventMap(XAttributeMap eventMap, Queue<TransitionInfo> transitionInfoQueue){
+        for(TransitionInfo transitionInfo: transitionInfoQueue){
+            if(hasUniqueKey(transitionInfo.getKey(), transitionInfoQueue)){
+                XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral(transitionInfo.getKey(), transitionInfo.getValue(), null);
+                eventMap.put(transitionInfo.getKey(), xAttributeLiteral);
             } else {
-                addListOfDuplicateKeysToEventMap(eventMap, transitionInfo, pair);
+                addListOfDuplicateKeysToEventMap(eventMap, transitionInfoQueue, transitionInfo);
             }
         }
         return eventMap;
     }
 
-    public XAttributeMap addListOfDuplicateKeysToEventMap(XAttributeMap eventMap, Queue<Pair<String,String>> transitionInfo, Pair<String, String> pair){
-        XAttributeList xAttributeList = factory.createAttributeList(pair.getKey(), null);
+    /**
+     *
+     * @param eventMap
+     * @param transitionInfoQueue
+     * @param transitionInfo
+     * @return
+     */
+    public XAttributeMap addListOfDuplicateKeysToEventMap(XAttributeMap eventMap, Queue<TransitionInfo> transitionInfoQueue, TransitionInfo transitionInfo){
+        XAttributeList xAttributeList = factory.createAttributeList(transitionInfo.getKey(), null);
         int i = 0;
-        for(Pair<String, String> pair2: transitionInfo){
+        for(TransitionInfo transitionInfo2: transitionInfoQueue){
 
-            if(pair2.getKey().equals(pair.getKey())) {
-                XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("r" + i, pair2.getValue(), null);
+            if(transitionInfo2.getKey().equals(transitionInfo.getKey())) {
+                XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("r" + i, transitionInfo2.getValue(), null);
                 xAttributeList.addToCollection(xAttributeLiteral);
                 i++;
             }
         }
-        eventMap.put(pair.getKey(), xAttributeList);
+        eventMap.put(transitionInfo.getKey(), xAttributeList);
         return eventMap;
     }
 
-    public Boolean hasUniqueKey(String key, Queue<Pair<String, String>> transitionInfo){
+    /**
+     *
+     * @param key
+     * @param transitionInfoQueue
+     * @return
+     */
+    public Boolean hasUniqueKey(String key, Queue<TransitionInfo> transitionInfoQueue){
         Integer count = 0;
-        for(Pair<String, String> pair: transitionInfo){
-            if(pair.getKey().equals(key)){
+        for(TransitionInfo transitionInfo: transitionInfoQueue){
+            if(transitionInfo.getKey().equals(key)){
                 count ++;
             }
         }
         return count == 1;
     }
 
+    /**
+     *
+     * @param transitionSubString
+     * @return
+     */
     public Boolean isLifeCycleTransition(String transitionSubString){
         switch(transitionSubString){
             case "schedule" :
@@ -417,13 +553,18 @@ public class LogCreator {
         }
     }
 
-    public Queue<Pair<String, String>> getTransitionInfoFromTransitionLabel(String transitionString){
-        Queue<Pair<String, String>> info = new LinkedList<>();
+    /**
+     *
+     * @param transitionString
+     * @return
+     */
+    public Queue<TransitionInfo> getTransitionInfoFromTransitionLabel(String transitionString){
+        Queue<TransitionInfo> info = new LinkedList<>();
         String transitionSubString = transitionString;
         Integer indexOfLastPlus = 0;
         Integer plusCount = 0;
         if(!transitionString.contains("+")){
-            info.add(new Pair("concept:name", transitionString));
+            info.add(new TransitionInfo("concept:name", transitionString));
         } else {
             while(transitionSubString.contains("+")){
                 Integer indexOfPlus = transitionSubString.indexOf("+");
@@ -433,35 +574,46 @@ public class LogCreator {
             }
             //TODO MAYBE SPLIT THIS
             if(isLifeCycleTransition(transitionSubString) && lifeCycleIsInTransitionName()) {
-                info.add(new Pair("concept_name", transitionString.substring(0, indexOfLastPlus + plusCount - 1)));
-                info.add(new Pair("lifecycle:transition", transitionSubString));
+                info.add(new TransitionInfo("concept_name", transitionString.substring(0, indexOfLastPlus + plusCount - 1)));
+                info.add(new TransitionInfo("lifecycle:transition", transitionSubString));
             } else {
-                info.add(new Pair("concept:name", transitionString));
+                info.add(new TransitionInfo("concept:name", transitionString));
             }
         }
 
         return info;
     }
 
-    public Queue<Pair<String, String>> getTransitionInfoFromBinding(Binding b){
+    /**
+     *
+     * @param b
+     * @return
+     */
+    public Queue<TransitionInfo> getTransitionInfoFromBinding(Binding b){
         String transitionString = b.getTransitionInstance().getNode().getName().asString();
 
-        Queue<Pair<String, String>> transitionInfo = getTransitionInfoFromTransitionLabel(transitionString);
+        Queue<TransitionInfo> transitionInfoQueue = getTransitionInfoFromTransitionLabel(transitionString);
 
         List<Arc> targetArcs = b.getTransitionInstance().getNode().getTargetArc();
         for(Arc arc: targetArcs){
-            Queue<Pair<String, String>> arcInfo = getTransitionInfoFromTargetArc(arc, b);
-            if(arcInfo != null) {
-                for (Pair<String, String> pair : arcInfo) {
-                    transitionInfo.add(pair);
+            Queue<TransitionInfo> targetArcTransitionInfoQueue = getTransitionInfoFromTargetArc(arc, b);
+            if(targetArcTransitionInfoQueue != null) {
+                for (TransitionInfo transitionInfo : targetArcTransitionInfoQueue) {
+                    transitionInfoQueue.add(transitionInfo);
                 }
             }
         }
 
-        return transitionInfo;
+        return transitionInfoQueue;
     }
 
-    public Queue<Pair<String, String>> getTransitionInfoFromTargetArc(Arc arc, Binding b) {
+    /**
+     *
+     * @param arc
+     * @param b
+     * @return
+     */
+    public Queue<TransitionInfo> getTransitionInfoFromTargetArc(Arc arc, Binding b) {
         if (arc.getHlinscription().getText().equals(config.caseId)) {
             return null;
         }
@@ -492,16 +644,24 @@ public class LogCreator {
 //        return gainedInfo;
 //    }
 
-    public Queue<Pair<String, String>> getTransitionInfoFromArcInscriptionNew(String arcInscription, Binding b) {
+    /**
+     *
+     * @param arcInscription
+     * @param b
+     * @return
+     */
+    public Queue<TransitionInfo> getTransitionInfoFromArcInscriptionNew(String arcInscription, Binding b) {
         Queue gainedInfo = new LinkedList<>();
         String[] parts = SeperateArcInScriptionInListOfStrings(arcInscription);
         for(String part: parts) {
             if (arcInscription.contains("`")) {
                 String[] arrayWithAmountAndBindingVariable = part.split(Pattern.quote("`"));
                 Integer amount = Integer.parseInt(arrayWithAmountAndBindingVariable[0]);
-                for (int i = 0; i < amount; i++) {
-                    if(!partIsCaseId(arrayWithAmountAndBindingVariable[1])) {
-                        gainedInfo.add(getTransitionInfoFromBindingVariable(arrayWithAmountAndBindingVariable[1], b));
+                if(arrayWithAmountAndBindingVariable.length > 1) {
+                    for (int i = 0; i < amount; i++) {
+                        if (!partIsCaseId(arrayWithAmountAndBindingVariable[1])) {
+                            gainedInfo.add(getTransitionInfoFromBindingVariable(arrayWithAmountAndBindingVariable[1], b));
+                        }
                     }
                 }
             } else {
@@ -514,10 +674,20 @@ public class LogCreator {
         return gainedInfo;
     }
 
+    /**
+     *
+     * @param part
+     * @return
+     */
     public Boolean partIsCaseId(String part){
         return part.equals(config.caseId);
     }
 
+    /**
+     *
+     * @param arcInscription
+     * @return
+     */
     public String[] SeperateArcInScriptionInListOfStrings(String arcInscription){
         arcInscription = arcInscription.replaceAll("\\(+|\\)", "");
         String[] listOfSeperatedStrings = {};
@@ -529,6 +699,12 @@ public class LogCreator {
         return listOfSeperatedStrings;
     }
 
+    /**
+     *
+     * @param originalArray
+     * @param toAddArray
+     * @return
+     */
     public String[] mergeArrays(String[] originalArray, String[] toAddArray){
         int originalArrayLength = originalArray.length;
         int toAddArrayLength = toAddArray.length;
@@ -539,7 +715,13 @@ public class LogCreator {
         return outputArray;
     }
 
-    public Pair<String, String> getTransitionInfoFromBindingVariable(String arcInscription, Binding b){
+    /**
+     *
+     * @param arcInscription
+     * @param b
+     * @return
+     */
+    public TransitionInfo getTransitionInfoFromBindingVariable(String arcInscription, Binding b){
         if(arcInscription.equals(config.caseId)){
             System.out.println("I need to add an error here. This should not happen");
             return null;
@@ -548,7 +730,7 @@ public class LogCreator {
         String valueName = b.getValueAssignment(arcInscription).getValue().replaceAll("^\"+|\"+$", "");
         String colorName = varDeclarations.get(arcInscription);
         String key = colorName + ":" + arcInscription;
-        return new Pair(key, valueName);
+        return new TransitionInfo(key, valueName);
 
     }
 
@@ -601,6 +783,11 @@ public class LogCreator {
 //        return gainedInfo;
 //    }
 
+    /**
+     *
+     * @param logEvent
+     * @throws Exception
+     */
     public void addEventToLog(LogEvent logEvent) throws Exception{
         Binding b = logEvent.getBinding();
         String id = null;
@@ -618,13 +805,13 @@ public class LogCreator {
         }
         XTrace trace = traces.get(id);
 
+        System.out.println("start createXEventFromBinding");
         XEvent xEvent = createXEventFromBinding(logEvent);
+        System.out.println("end createXEventFromBinding");
 
         if(trace == null){
             trace = factory.createTrace(traceMap);
-            if(!config.informationLevelIsEvent) {
-                trace = addCaseIdToTraceAttributes(trace, logEvent);
-            }
+            trace = addCaseIdToTraceAttributes(trace, logEvent);
             traces.put(id, trace);
         }
 
@@ -632,8 +819,14 @@ public class LogCreator {
 
     }
 
+    /**
+     *
+     * @param trace
+     * @param logEvent
+     * @return
+     */
     public XTrace addCaseIdToTraceAttributes(XTrace trace, LogEvent logEvent){
-        XAttributeMap traceMap = factory.createAttributeMap();
+        traceMap = trace.getAttributes();
 
         // ADD traceID to the event
         XAttributeLiteral xAttributeLiteralCaseId = factory.createAttributeLiteral("concept:name", logEvent.getBinding().getValueAssignment(config.caseId).getValue(), null);
@@ -642,22 +835,42 @@ public class LogCreator {
     }
 
 
+    /**
+     *
+     * @return
+     */
     public Boolean recordStartEvent(){
         return config.recordedEvents.contains("start") || config.recordedEvents.equals("in transition name");
     }
 
+    /**
+     *
+     * @return
+     */
     public Boolean recordCompleteEvent(){
         return config.recordedEvents.contains("complete");
     }
 
+    /**
+     *
+     * @return
+     */
     public Boolean lifeCycleIsInTransitionName(){
         return config.recordedEvents.equals("in transition name");
     }
 
+    /**
+     *
+     * @param varDeclarations
+     */
     public void setVarDeclarations(Map<String, String> varDeclarations) {
         this.varDeclarations = varDeclarations;
     }
 
+    /**
+     *
+     * @param bindingQueue
+     */
     public void setBindingQueue(Queue<LogEvent> bindingQueue) {
         this.bindingQueue = bindingQueue;
     }

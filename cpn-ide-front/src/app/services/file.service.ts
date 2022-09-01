@@ -4,6 +4,7 @@ import { Message } from "../common/message";
 import * as FileSaver from "file-saver";
 import { ElectronService } from "ngx-electron";
 import { AccessCpnService } from "./access-cpn.service";
+import { SimulationService } from "./simulation.service";
 
 @Injectable({
   providedIn: "root",
@@ -15,13 +16,13 @@ export class FileService {
     private accessCpnService: AccessCpnService
   ) {}
 
-  public saveAsText(charArray: string, fileName: string, callback: any) {
+  public saveCPNAsText(charArray: string, fileName: string, callback: any) {
     // const blob = new Blob([charArray], { type: 'application/xml; charset=iso-8859-1' });
     // FileSaver.saveAs(blob, fileName);if(this.electronService)
     if (this.electronService.isElectronApp) {
       this.electronService.remote.dialog.showSaveDialog(
         {
-          title: "SSave as",
+          title: "Save as",
           defaultPath: fileName,
           filters: [{ name: "CPN models", extensions: ["cpn", "CPN"] }],
         },
@@ -50,6 +51,24 @@ export class FileService {
 
     // this.eventService.send(Message.PROJECT_SAVED);
   }
+
+  public getLogNameFromElectronService(fileName: string, callback: any) {
+    // const blob = new Blob([charArray], { type: 'application/xml; charset=iso-8859-1' });
+    // FileSaver.saveAs(blob, fileName);if(this.electronService)
+      this.electronService.remote.dialog.showSaveDialog(
+        {
+          title: "SSave as",
+          defaultPath: fileName,
+          filters: [{ name: "CPN models", extensions: ["cpn", "CPN"] }],
+        },
+        (newFileName) => {
+          callback(newFileName);
+        }
+      );
+    } 
+
+    // this.eventService.send(Message.PROJECT_SAVED);
+
   // public saveAsText(charArray: string, fileName: string) {
   //   const { dialog, app } = require('electron');
   //
