@@ -52,8 +52,8 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @return
+     * Getinstance method
+     * @return the logCreator class
      */
     public static LogCreator getInstance() {
         if(single_instance == null){
@@ -72,9 +72,9 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @param config
-     * @return
+     * Function that creates a XES log using the recorded events
+     * @param config, the configuration settings of the log
+     * @return a log with all its attributes as a XLog
      * @throws Exception
      */
     public XLog CreateXESLog(LogCreationConfig config) throws Exception {
@@ -106,14 +106,15 @@ public class LogCreator {
         bindingQueue = backupBindingQueue;
         backupBindingQueue = new LinkedList<>();
 
-        //TODO REREPLACE THIS WITH FILENAME
         return log;
     }
 
     /**
-     *
+     * This method checks wether an attribute is part of all events in a trace, if this is the case the
+     * attribute is removed from all events in the trace and added to the trace.
+     * This is not the case when the element is "transition-name", "lifecycle attribute", or "Timestamp"
      * @param trace
-     * @return
+     * @return a trace in which attributes that are part of all events are now part of the trace
      */
     public XTrace createTraceAttributes(XTrace trace){
         Queue<XAttribute> traceAttributes = findTraceAttributes(trace);
@@ -145,9 +146,10 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @param config
-     * @return
+     * Function that creates a XES log using the recorded events
+     * TODO I don't know if this works
+     * @param config, the configuration settings of the log
+     * @return a log in List<String[]> format
      * @throws Exception
      */
     public List<String[]> CreateCSVLog(LogCreationConfig config) throws Exception {
@@ -173,7 +175,7 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Method used to determine what the how an Empty CSV file should be
      */
     public void determineColumnValuesOfCSV(){
         //Timestamp
@@ -190,12 +192,13 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Method that adds an event to the CSV file
+     * TODO I don't know if this method works
      * @param event
      * @throws ParseException
      */
     public void addEventToCSVInput(LogEvent event) throws ParseException {
-        String timeStampEvent = getTimeStampFromEvent(event);
+        String timeStampEvent = getTimeStampFromEvent(event).toString();
         String lifeCycleTransition = getLifeCycleTransitionFromEvent(event);
         String conceptName = getConceptNameFromEvent(event, lifeCycleTransition);
         String[] varDeclarationsArray = getVarDeclarationsFromEvent(event);
@@ -208,24 +211,42 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Method that gets the timestamp for from the simulator time of the event using the configurations
      * @param event
-     * @return
+     * @return Real life time stamp of the event
      * @throws ParseException
      */
-    public String getTimeStampFromEvent(LogEvent event) throws ParseException {
-        String result = "";
-        Double eventTime = event.getTime();
-        long eventTimeTransformed = (long) (eventTime * config.getTimeUnitMultiplier() + config.getStartTimeLong());
-        Date date = new Date(eventTimeTransformed);
-        result = result + date;
-        return result;
+    public Date getTimeStampFromEvent(LogEvent event) throws ParseException {
+        double eventTime = event.getTime();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(new Date(config.getStartTimeLong()));
+        calendar.add(config.getCalendarValue(), (int) eventTime);
+        if(!config.getTimeUnit().equals("years") && !config.getTimeUnit().equals(("months"))){
+            calendar.add(Calendar.MILLISECOND, (int) (eventTime % 1 * config.getTimeUnitMultiplier()));
+        } else { //value becomes to large for int
+            //Months and decimal numbers don't work well together
+            if(config.getTimeUnit().equals("months") && eventTime % 1 != 0){
+                int month = calendar.get(Calendar.MONTH);
+                double monthMultiplier;
+                if(month == 1){
+                    monthMultiplier = 28.0/31.0;
+                } else if (month == 3 || month == 5 || month == 8 || month == 10){
+                    monthMultiplier = 30.0/31.0;
+                } else {
+                    monthMultiplier = 1;
+                }
+                calendar.add(Calendar.SECOND, (int) (eventTime % 1 * monthMultiplier * (config.getTimeUnitMultiplier()/1000)));
+            } else {
+                calendar.add(Calendar.SECOND, (int) (eventTime % 1 * (config.getTimeUnitMultiplier() / 1000)));
+            }
+        }
+        return calendar.getTime();
     }
 
     /**
-     *
+     * Function that gets the lifecycle transition element from a transition
      * @param event
-     * @return
+     * @return the lifecycle transition from the event
      */
     public String getLifeCycleTransitionFromEvent(LogEvent event){
         String result = "";
@@ -249,10 +270,10 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Get the concept name from an event
      * @param event
      * @param lifeCycleTransitionValue
-     * @return
+     * @return the concept name of an event
      */
     public String getConceptNameFromEvent(LogEvent event, String lifeCycleTransitionValue){
         String result = "";
@@ -265,9 +286,9 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Gets all the value declarations from an event (all elements in the binding)
      * @param event
-     * @return
+     * @return a list of value declarations
      */
     public String[] getVarDeclarationsFromEvent(LogEvent event){
         Set<String> keySet = varDeclarations.keySet();
@@ -285,14 +306,21 @@ public class LogCreator {
         return result;
     }
 
+    /**
+     * Method that checks if the key is binded to an event
+     * @param key
+     * @param event
+     * @return true if the key is binded, false if the key is not binded
+     */
     public Boolean keyIsBinded(String key, LogEvent event){
         return event.getBinding().getValueAssignment(key) != null;
     }
 
 
     /**
+     * Method that finds attributes that are part of all events in the trace
      * @param trace
-     * @return
+     * @return a Queue of attributes that are part of all events in a trace
      */
     public Queue<XAttribute> findTraceAttributes(XTrace trace){
         Queue<XAttribute> attributesSeenInFirstEvent = findPossibleTraceAttributesOfFirstEvent(trace);
@@ -306,8 +334,9 @@ public class LogCreator {
     }
 
     /**
+     * Gets all the attributes of the first event, which are not the conceptname, lifecycl and timestamp attributes
      * @param trace
-     * @return
+     * @return a queue of attributes that are part of the first event (without the above mentioned)
      */
     public Queue<XAttribute> findPossibleTraceAttributesOfFirstEvent(XTrace trace){
         Queue<XAttribute> attributesSeenInFirstEvent = new LinkedList<>();
@@ -323,10 +352,10 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Check if the attributes in the first events are also in the other events
      * @param trace
      * @param attributesSeenInFirstEvent
-     * @return
+     * @return A queue of elements that are not seen in all events.
      */
     public Queue<XAttribute> findAttributesNotInAllEvents(XTrace trace, Queue<XAttribute> attributesSeenInFirstEvent){
         Queue<XAttribute> attributesNotSeenInAllEvents = new LinkedList<>();
@@ -353,7 +382,7 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Method that prints attributes of a binding, build for Debug purposes
      * @param binding
      */
     public void printBinding(Binding binding){
@@ -361,8 +390,6 @@ public class LogCreator {
         System.out.println("getAllAssignments =" + binding.getAllAssignments());
         System.out.println("transition name = " + binding.getTransitionInstance().getNode().getName().asString());
         System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime());
-        //TODO THIS LINE THROWS AN ERROR WHEN THERE IS NO TIME
-        //System.out.println("time hopefully = " + binding.getTransitionInstance().getNode().getTime().asString().replace("@", "").replace(" ", "").replace("+", ""));
         List<Arc> allTargetArcs = binding.getTransitionInstance().getNode().getTargetArc();
         for(Arc arc: allTargetArcs){
             System.out.println("an targetarc = " + arc);
@@ -374,9 +401,9 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Method that creates an Xevent from a LogEvent
      * @param logEvent
-     * @return
+     * @return an XEvent which will be placed in a trace
      * @throws ParseException
      */
     public XEvent createXEventFromBinding(LogEvent logEvent) throws ParseException {
@@ -403,49 +430,27 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @param eventMap
-     * @param logEvent
-     * @return
+     * Method that adds time to the eventMap
+     * @param eventMap the eventMap time is added to
+     * @param logEvent the logEvent the time comes from
+     * @return the original eventMap with time added to it
      * @throws ParseException
      */
     public XAttributeMap addTimeToEventMap(XAttributeMap eventMap, LogEvent logEvent) throws ParseException {
         if(config.getTimeHasIncreased()) {
-            double eventTime = logEvent.getTime();
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTime(new Date(config.getStartTimeLong()));
-            calendar.add(config.getCalendarValue(), (int) eventTime);
-            if(!config.getTimeUnit().equals("years") && !config.getTimeUnit().equals(("months"))){
-                calendar.add(Calendar.MILLISECOND, (int) (eventTime % 1 * config.getTimeUnitMultiplier()));
-            } else { //value becomes to large for int
-                //Months and decimal numbers don't work well together
-                if(config.getTimeUnit().equals("months") && eventTime % 1 != 0){
-                    int month = calendar.get(Calendar.MONTH);
-                    double monthMultiplier;
-                    if(month == 1){
-                        monthMultiplier = 28.0/31.0;
-                    } else if (month == 3 || month == 5 || month == 8 || month == 10){
-                        monthMultiplier = 30.0/31.0;
-                    } else {
-                        monthMultiplier = 1;
-                    }
-                    calendar.add(Calendar.SECOND, (int) (eventTime % 1 * monthMultiplier * (config.getTimeUnitMultiplier()/1000)));
-                } else {
-                    calendar.add(Calendar.SECOND, (int) (eventTime % 1 * (config.getTimeUnitMultiplier() / 1000)));
-                }
-            }
-
-            XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", calendar.getTime(), null);
+            Date date = getTimeStampFromEvent(logEvent);
+            XAttributeTimestamp xAttributeTimestamp = factory.createAttributeTimestamp("time:timestamp", date, null);
             eventMap.put("time", xAttributeTimestamp);
         }
         return eventMap;
     }
 
     /**
-     *
-     * @param eventMap
-     * @param logEvent
-     * @return
+     * Method that adds the lifecycle transtition to the event map BASED ON THE CONFIG
+     * this function does nothing when the lifecycle transition attribute is "in transition name"
+     * @param eventMap the eventMap lifecycle transition is added to
+     * @param logEvent the logEvent the time  comes from
+     * @return the original eventMap with lifecycle transition added to it.
      */
     public XAttributeMap addLifeCycleTransitionFromConfigToEventMap(XAttributeMap eventMap, LogEvent logEvent){
         if(!lifeCycleIsInTransitionName()) {
@@ -461,10 +466,10 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @param eventMap
-     * @param binding
-     * @return
+     * Method that adds the remaining attributes to the eventMap
+     * @param eventMap The eventmap the remaining attributes are added to
+     * @param binding The binding of the event, used to get information needed
+     * @return the original eventmap with added attributes
      */
     public XAttributeMap addRemainingAttributesToEventMap(XAttributeMap eventMap, Binding binding){
         Queue<TransitionInfo> transitionInfo = getTransitionInfoFromBinding(binding);
@@ -473,35 +478,36 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @param eventMap
-     * @param transitionInfoQueue
-     * @return
+     * Function that places all the aquired transitionInfo in an eventMap
+     * @param eventMap the eventmap the info should be added to
+     * @param transitionInfoQueue All the info that needs to be added to the event
+     * @return the original eventMap with the all the elements from the transitionInfoQueue
      */
     public XAttributeMap placeTransitionInfoInEventMap(XAttributeMap eventMap, Queue<TransitionInfo> transitionInfoQueue){
+        List<String> duplicateKeys = new LinkedList<>();
         for(TransitionInfo transitionInfo: transitionInfoQueue){
-            if(hasUniqueKey(transitionInfo.getKey(), transitionInfoQueue)){
+            if(hasUniqueKey(transitionInfo.getKey(), transitionInfoQueue) || duplicateKeys.contains(transitionInfo.getKey())){
                 XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral(transitionInfo.getKey(), transitionInfo.getValue(), null);
                 eventMap.put(transitionInfo.getKey(), xAttributeLiteral);
             } else {
                 addListOfDuplicateKeysToEventMap(eventMap, transitionInfoQueue, transitionInfo);
+                duplicateKeys.add(transitionInfo.getKey());
             }
         }
         return eventMap;
     }
 
     /**
-     *
-     * @param eventMap
-     * @param transitionInfoQueue
-     * @param transitionInfo
-     * @return
+     * When there is more than one element of the same type and on the same variable add a list of variables instead of a singular variable
+     * @param eventMap the eventMap the list should be added to
+     * @param transitionInfoQueue to check how many values should be added
+     * @param transitionInfo The info that has a duplicate
+     * @return the eventMap with the duplicate info added
      */
     public XAttributeMap addListOfDuplicateKeysToEventMap(XAttributeMap eventMap, Queue<TransitionInfo> transitionInfoQueue, TransitionInfo transitionInfo){
         XAttributeList xAttributeList = factory.createAttributeList(transitionInfo.getKey(), null);
         int i = 0;
         for(TransitionInfo transitionInfo2: transitionInfoQueue){
-
             if(transitionInfo2.getKey().equals(transitionInfo.getKey())) {
                 XAttributeLiteral xAttributeLiteral = factory.createAttributeLiteral("r" + i, transitionInfo2.getValue(), null);
                 xAttributeList.addToCollection(xAttributeLiteral);
@@ -513,10 +519,10 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Method that checks if the key is unique in the transitionQueue
      * @param key
      * @param transitionInfoQueue
-     * @return
+     * @return True when the key is only once in the Queue, false if it is more than once in the queue
      */
     public Boolean hasUniqueKey(String key, Queue<TransitionInfo> transitionInfoQueue){
         Integer count = 0;
@@ -529,9 +535,9 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Checks if a string is a lifecycle transition string
      * @param transitionSubString
-     * @return
+     * @return True if the string is a lifecycle transition string, false otherwise
      */
     public Boolean isLifeCycleTransition(String transitionSubString){
         switch(transitionSubString){
@@ -554,9 +560,10 @@ public class LogCreator {
     }
 
     /**
-     *
+     * Gets information about the transition from the string in the transition,
+     * this info is the name of the transition and the lifecycle transition attribute
      * @param transitionString
-     * @return
+     * @return Info containing the transitionName and possible lifecycle transition attribute
      */
     public Queue<TransitionInfo> getTransitionInfoFromTransitionLabel(String transitionString){
         Queue<TransitionInfo> info = new LinkedList<>();
@@ -572,7 +579,6 @@ public class LogCreator {
                 transitionSubString = transitionSubString.substring(indexOfPlus+1);
                 plusCount ++;
             }
-            //TODO MAYBE SPLIT THIS
             if(isLifeCycleTransition(transitionSubString) && lifeCycleIsInTransitionName()) {
                 info.add(new TransitionInfo("concept_name", transitionString.substring(0, indexOfLastPlus + plusCount - 1)));
                 info.add(new TransitionInfo("lifecycle:transition", transitionSubString));
@@ -585,9 +591,9 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @param b
-     * @return
+     * Gets transition info from the binding
+     * @param b the binding of the fired transition
+     * @return A queue with all information except CaseId from all incoming edges
      */
     public Queue<TransitionInfo> getTransitionInfoFromBinding(Binding b){
         String transitionString = b.getTransitionInstance().getNode().getName().asString();
@@ -608,10 +614,10 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @param arc
-     * @param b
-     * @return
+     * Gets the transitionInfo from a specific target Arc
+     * @param arc The arc we want to get the information from
+     * @param b The binding of the fired transition
+     * @return the information on the arc without the caseId
      */
     public Queue<TransitionInfo> getTransitionInfoFromTargetArc(Arc arc, Binding b) {
         if (arc.getHlinscription().getText().equals(config.caseId)) {
@@ -645,10 +651,10 @@ public class LogCreator {
 //    }
 
     /**
-     *
-     * @param arcInscription
-     * @param b
-     * @return
+     * Get the information from the inscription of an arc
+     * @param arcInscription the inscription we want information from
+     * @param b the binding
+     * @return All information of the inscription except the caseId
      */
     public Queue<TransitionInfo> getTransitionInfoFromArcInscriptionNew(String arcInscription, Binding b) {
         Queue gainedInfo = new LinkedList<>();
@@ -675,12 +681,12 @@ public class LogCreator {
     }
 
     /**
-     *
-     * @param part
-     * @return
+     * Checks wethr a string is the caseId string
+     * @param string
+     * @return true if the string is the caseId false otherwise
      */
-    public Boolean partIsCaseId(String part){
-        return part.equals(config.caseId);
+    public Boolean partIsCaseId(String string){
+        return string.equals(config.caseId);
     }
 
     /**
