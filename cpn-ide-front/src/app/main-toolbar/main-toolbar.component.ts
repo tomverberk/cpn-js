@@ -397,6 +397,9 @@ export class MainToolbarComponent implements OnInit {
   }
 
   onPlaceCaseId(){
+    if (this.electronService.isElectronApp) {
+      //TODO
+    } else {
       const dialogRef = this.saveDialog.open(DialogComponent, {
         width: "500px",
         data: {
@@ -418,9 +421,13 @@ export class MainToolbarComponent implements OnInit {
           this.modelService.doPlaceCaseId(data.input[0].value);
         }
       });
+    }
   }
 
   onSetInitialMarking(){
+    if (this.electronService.isElectronApp) {
+      //TODO
+    } else {
       const dialogRef = this.saveDialog.open(DialogComponent, {
         width: "500px",
         data: {
@@ -443,6 +450,7 @@ export class MainToolbarComponent implements OnInit {
           this.modelService.setInitialMarking(data.input[0].value, data.input[1].value);
         }
       });
+    }
     
   }
 

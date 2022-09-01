@@ -91,37 +91,51 @@ export class SimulationPanelComponent implements OnInit, OnDestroy {
     console.log(isSaveAs);
     const fs = this.accessCpnService.getFs();
     console.log(fs);
-    console.log(this.modelService.projectName);
-    console.log(this.modelService.logName);
-    const dialogRef = this.dialog.open(DialogComponent, {
-      width: "500px",
-      data: {
-        title: "Save the log to file",
-        input: [
-          { title: "Filename", value: this.modelService.projectName.replace(".cpn", "")},
-        ],
-      },
-    });
-    dialogRef.afterClosed().subscribe((data) => {
-      if (data && data.result === DialogComponent.YES) {
-        console.log(
-          this.constructor.name,
-          "onSaveProject(), YES clicked, data = ",
-          data
-        );
+    if (fs && !isSaveAs) {
+      fs.fs.writeFile(
+        fs.path,
+        this.projectService.getStringProjectDataForSave(),
+        (err) => {
+          console.log("Save project error", err);
+        }
+      );
+    } else {
+      if (this.electronService.isElectronApp) {
+        this.simulationService.saveLogToFile(this.modelService.projectName);
+      } else {
+        console.log(this.modelService.projectName);
+        console.log(this.modelService.logName);
+        const dialogRef = this.dialog.open(DialogComponent, {
+          width: "500px",
+          data: {
+            title: "Save the log to file",
+            input: [
+              { title: "Filename", value: this.modelService.projectName.replace(".cpn", "")},
+            ],
+          },
+        });
+        dialogRef.afterClosed().subscribe((data) => {
+          if (data && data.result === DialogComponent.YES) {
+            console.log(
+              this.constructor.name,
+              "onSaveProject(), YES clicked, data = ",
+              data
+            );
 
-        // Save to file
-        console.log(data.input[0].value);
-        this.simulationService.runCreateLog(data.input[0].value);
+            // Save to file
+            console.log(data.input[0].value);
+            this.simulationService.runCreateLog(data.input[0].value);
 
-        //this.simulationService.setOutputPath(data.input[0].value);
-        //this.simulationService.getOutputPath();
-        
-        //this.simulationService.saveLogToFile(data.input[0].value);
-        this.projectService.setModelName(data.input[0].value);
+            //this.simulationService.setOutputPath(data.input[0].value);
+            //this.simulationService.getOutputPath();
+            
+            //this.simulationService.saveLogToFile(data.input[0].value);
+            this.projectService.setModelName(data.input[0].value);
 
+          }
+        });
       }
-    });
+    }
   }
 
   getMultistepProgress() {
